@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Search Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml,<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><g fill="%23ffffff" fill-opacity="0.05"><circle cx="30" cy="30" r="1"/></g></svg>');
+            pointer-events: none;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 400px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(25px);
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 2rem;
+            overflow-y: auto;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .main-content {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea.form-control {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 10px 25px rgba(252, 182, 159, 0.3);
+        }
+
+        .pdf-viewer {
+            flex: 1;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .pdf-container {
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pdf-toolbar {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pdf-content {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pdf-embed {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            color: #667eea;
+        }
+
+        .loading-spinner.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #e1e5e9;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            padding: 4rem 2rem;
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 300;
+        }
+
+        .empty-state p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+
+        .stats {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stats h4 {
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 0.5rem;
+        }
+
+        .stats p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .error-message {
+            background: #ffe6e6;
+            color: #d63031;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 4px solid #d63031;
+        }
+
+        .success-message {
+            background: #e8f5e8;
+            color: #00b894;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 4px solid #00b894;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h2 style="margin-bottom: 2rem; color: rgba(255, 255, 255, 0.9);">Puzzle Settings</h2>
+            
+            <div id="messages"></div>
+            
+            <form id="puzzleForm">
+                <div class="form-group">
+                    <label for="numPuzzles">Number of Puzzles</label>
+                    <input type="number" id="numPuzzles" class="form-control" value="2" min="1" max="20">
+                </div>
+                
+                <div class="form-group">
+                    <label for="wordsPerPuzzle">Words per Puzzle</label>
+                    <input type="number" id="wordsPerPuzzle" class="form-control" value="8" min="1" max="15">
+                </div>
+                
+                <div class="form-group">
+                    <label for="separator">Page Separator</label>
+                    <input type="text" id="separator" class="form-control" value="|" placeholder="e.g., |, ---, NEXT">
+                </div>
+                
+                <div class="form-group">
+                    <label for="wordInput">Word List</label>
+                    <textarea id="wordInput" class="form-control" placeholder="Enter words separated by commas. Use separator to create new puzzles.&#10;&#10;Example:&#10;cat, dog, bird, fish, mouse, elephant | apple, banana, orange, grape, cherry, strawberry"></textarea>
+                </div>
+                
+                <button type="submit" class="btn" id="generateBtn">
+                    Generate Puzzles
+                </button>
+                
+                <button type="button" class="btn btn-secondary" id="saveBtn" style="display: none;">
+                    Save PDF As...
+                </button>
+            </form>
+            
+            <div class="stats" id="puzzleStats" style="display: none;">
+                <h4>Generation Summary</h4>
+                <p id="statsText"></p>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="header">
+                <h1>Word Search Generator</h1>
+                <p>Create beautiful PDF word search puzzles with solutions</p>
+            </div>
+            
+            <div class="pdf-viewer">
+                <div id="emptyState" class="empty-state">
+                    <h3>Ready to Generate</h3>
+                    <p>Fill in your puzzle settings and word list to create amazing word search puzzles. Your PDF will appear here with a built-in viewer.</p>
+                </div>
+                
+                <div id="loadingState" class="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>Generating your puzzles...</p>
+                </div>
+                
+                <div id="pdfContainer" class="pdf-container" style="display: none;">
+                    <div class="pdf-toolbar">
+                        <span id="pdfTitle">Word Search Puzzles</span>
+                        <button class="btn btn-secondary" id="openExternalBtn" style="padding: 0.5rem 1rem; width: auto;">
+                            Open in PDF Viewer
+                        </button>
+                    </div>
+                    <div class="pdf-content">
+                        <embed id="pdfEmbed" class="pdf-embed" type="application/pdf">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { ipcRenderer, shell } = require('electron');
+        
+        let currentPdfPath = null;
+        
+        document.getElementById('puzzleForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const config = {
+                numPuzzles: parseInt(document.getElementById('numPuzzles').value),
+                wordsPerPuzzle: parseInt(document.getElementById('wordsPerPuzzle').value),
+                separator: document.getElementById('separator').value,
+                wordInput: document.getElementById('wordInput').value.trim()
+            };
+            
+            if (!config.wordInput) {
+                showMessage('Please enter some words for the puzzle.', 'error');
+                return;
+            }
+            
+            showLoading(true);
+            clearMessages();
+            
+            try {
+                const result = await ipcRenderer.invoke('generate-puzzles', config);
+                
+                if (result.success) {
+                    currentPdfPath = result.filename;
+                    showPdf(result.filename);
+                    showStats(result.puzzles, config);
+                    showMessage('Puzzles generated successfully!', 'success');
+                    document.getElementById('saveBtn').style.display = 'block';
+                } else {
+                    showMessage(`Error: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`Unexpected error: ${error.message}`, 'error');
+            } finally {
+                showLoading(false);
+            }
+        });
+        
+        document.getElementById('saveBtn').addEventListener('click', async () => {
+            if (!currentPdfPath) return;
+            
+            try {
+                const result = await ipcRenderer.invoke('save-pdf-as', currentPdfPath);
+                
+                if (result.success && !result.canceled) {
+                    showMessage(`PDF saved to: ${result.filePath}`, 'success');
+                }
+            } catch (error) {
+                showMessage(`Error saving PDF: ${error.message}`, 'error');
+            }
+        });
+        
+        document.getElementById('openExternalBtn').addEventListener('click', () => {
+            if (currentPdfPath) {
+                shell.openPath(currentPdfPath);
+            }
+        });
+        
+        function showLoading(show) {
+            document.getElementById('loadingState').classList.toggle('active', show);
+            document.getElementById('generateBtn').disabled = show;
+            
+            if (show) {
+                document.getElementById('emptyState').style.display = 'none';
+                document.getElementById('pdfContainer').style.display = 'none';
+            }
+        }
+        
+        function showPdf(filename) {
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('pdfContainer').style.display = 'flex';
+            document.getElementById('pdfEmbed').src = filename;
+        }
+        
+        function showStats(puzzles, config) {
+            const statsElement = document.getElementById('puzzleStats');
+            const statsText = document.getElementById('statsText');
+            
+            let totalWords = 0;
+            puzzles.forEach(puzzle => {
+                totalWords += puzzle.placedWords.length;
+            });
+            
+            statsText.innerHTML = `
+                <strong>${puzzles.length}</strong> puzzle(s) created<br>
+                <strong>${totalWords}</strong> words placed successfully<br>
+                Grid size: <strong>15x15</strong><br>
+                Pages: <strong>${puzzles.length * 2}</strong> (puzzles + solutions)
+            `;
+            
+            statsElement.style.display = 'block';
+        }
+        
+        function showMessage(message, type) {
+            const messagesContainer = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
+            messageDiv.textContent = message;
+            messagesContainer.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+        
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+        }
+        
+        // Example word list
+        document.getElementById('wordInput').value = 'cat, dog, bird, fish, mouse, elephant, tiger, lion | apple, banana, orange, grape, cherry, strawberry, peach, mango';
+    </script>
+</body>
+</html>
