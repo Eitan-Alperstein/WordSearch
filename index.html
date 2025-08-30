@@ -265,20 +265,14 @@
             
             <form id="puzzleForm">
                 <div class="form-group">
-                    <label for="numPuzzles">Number of Puzzles</label>
-                    <input type="number" id="numPuzzles" class="form-control" value="2" min="1" max="100">
-                </div>
-                
-                <div class="form-group">
                     <label for="wordsPerPuzzle">Words per Puzzle</label>
                     <input type="number" id="wordsPerPuzzle" class="form-control" value="8" min="1" max="15">
                 </div>
                 
-
-                
                 <div class="form-group">
-                    <label for="category">Word Category</label>
-                    <input type="text" id="category" class="form-control" placeholder="e.g., Animals, Fruits, Sports">
+                    <label for="category">Topics (comma-separated)</label>
+                    <input type="text" id="category" class="form-control" placeholder="e.g., Animals,Sports,Countries">
+                    <small style="color: rgba(255, 255, 255, 0.7); margin-top: 0.5rem; display: block;">Each topic will generate one puzzle. Separate topics with commas.</small>
                 </div>
                 <div class="form-group" id="wordListGroup" style="display:none;">
                     <label for="wordInput">Word List (auto-filled by AI)</label>
@@ -315,12 +309,16 @@
                 <div id="loadingState" class="loading-spinner">
                     <div class="spinner"></div>
                     <div style="margin: 1rem 0;">
-                        <div id="progressBarContainer" style="width: 100%; background: #e1e5e9; border-radius: 8px; height: 18px; overflow: hidden; margin-bottom: 0.5rem; display: none;">
+                        <div id="progressBarContainer" style="width: 100%; background: #e1e5e9; border-radius: 8px; height: 18px; overflow: hidden; margin-bottom: 0.5rem;">
                             <div id="progressBar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); transition: width 0.2s;"></div>
                         </div>
-                        <div id="progressStatus" style="color: #667eea; font-size: 1rem; text-align: center; min-height: 1.5em;"></div>
+                        <div id="progressStatus" style="color: #667eea; font-size: 1rem; text-align: center; min-height: 1.5em; margin-bottom: 1rem;"></div>
+                        <div id="progressDetail" style="color: #667eea; font-size: 0.9rem; text-align: left; margin: 1rem; padding: 1rem; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                            <div>Topics to Process: <span id="totalPuzzles">0</span></div>
+                            <div>Topics Completed: <span id="completedPuzzles">0</span></div>
+                            <div>Words Generated: <span id="generatedWords">0</span></div>
+                        </div>
                     </div>
-                    <p id="loadingText">Generating your puzzles...</p>
                 </div>
                 
                 <div id="pdfContainer" class="pdf-container" style="display: none;">
@@ -389,28 +387,43 @@
         }
 
         ipcRenderer.on('ollama-wordlist-stream', (event, msg) => {
-            if (msg.type === 'start') {
-                streamingWordList = '';
-                streamingActive = true;
-                document.getElementById('wordInput').value = '';
-                document.getElementById('wordListGroup').style.display = 'block';
-                // Start progress bar
-                const numPuzzles = parseInt(document.getElementById('numPuzzles').value);
-                const wordsPerPuzzle = parseInt(document.getElementById('wordsPerPuzzle').value);
-                startProgressBar(numPuzzles, wordsPerPuzzle);
+            if (msg.type === 'progress') {
+                document.getElementById('progressBarContainer').style.display = 'block';
+                document.getElementById('totalPuzzles').textContent = msg.total;
+                document.getElementById('completedPuzzles').textContent = msg.current;
+                
+                if (msg.currentAttempt) {
+                    document.getElementById('currentAttempt').textContent = msg.currentAttempt;
+                }
+
+                // Calculate progress percentage based on completed puzzles
+                const percent = Math.round((msg.current / msg.total) * 100);
+                document.getElementById('progressBar').style.width = `${percent}%`;
+                document.getElementById('progressStatus').textContent = msg.status;
+
+                // Update generated words count if we have wordList
+                if (streamingWordList) {
+                    const words = streamingWordList.split(/[|,]/).filter(w => w.trim()).length;
+                    document.getElementById('generatedWords').textContent = words;
+                }
+
             } else if (msg.type === 'chunk') {
                 streamingWordList += msg.data;
                 document.getElementById('wordInput').value = streamingWordList;
                 document.getElementById('wordInput').scrollTop = document.getElementById('wordInput').scrollHeight;
+                
+                // Update word count
+                const words = streamingWordList.split(/[|,]/).filter(w => w.trim()).length;
+                document.getElementById('generatedWords').textContent = words;
             } else if (msg.type === 'end') {
                 streamingActive = false;
                 document.getElementById('wordInput').value = msg.data.trim();
-                clearProgressBar();
+                document.getElementById('progressStatus').textContent = 'Generation complete!';
             } else if (msg.type === 'error') {
                 streamingActive = false;
                 showLoading(false);
                 showMessage('AI error: ' + msg.error, 'error');
-                clearProgressBar();
+                document.getElementById('progressStatus').textContent = 'Error: ' + msg.error;
             }
         });
 
@@ -419,16 +432,24 @@
             clearMessages();
             showLoading(true);
 
-            const numPuzzles = parseInt(document.getElementById('numPuzzles').value);
             const wordsPerPuzzle = parseInt(document.getElementById('wordsPerPuzzle').value);
             const separator = '|';
             const category = document.getElementById('category').value.trim();
 
             if (!category) {
                 showLoading(false);
-                showMessage('Please enter a category for the word search.', 'error');
+                showMessage('Please enter topics for the word search puzzles.', 'error');
                 return;
             }
+            
+            const topics = category.split(',').map(t => t.trim()).filter(t => t);
+            if (topics.length === 0) {
+                showLoading(false);
+                showMessage('Please enter at least one topic.', 'error');
+                return;
+            }
+            
+            const numPuzzles = topics.length;
 
             // Step 1: Ask Llama for a word list (streamed)
             streamingWordList = '';

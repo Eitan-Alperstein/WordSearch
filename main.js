@@ -1,5 +1,3 @@
-
-
 // IPC handler to generate word list from category using Llama
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
@@ -11,75 +9,89 @@ const PDFDocument = require('pdfkit');
 let ollama = require('ollama');
 if (ollama.default) ollama = ollama.default;
 
-ipcMain.handle('generate-word-list', async (event, { category, numPuzzles, wordsPerPuzzle, separator }) => {
-    // Generate one puzzle at a time, ensuring no duplicate words across puzzles
+ipcMain.handle('generate-word-list', async (event, { category, wordsPerPuzzle }) => {
     try {
         const promptTemplate = fs.readFileSync(path.join(__dirname, 'ollama-prompt.txt'), 'utf8');
         const separator = '|';
-        let allWords = new Set();
         let puzzles = [];
         let wordList = '';
-        event.sender.send('ollama-wordlist-stream', { type: 'start' });
-        for (let i = 0; i < numPuzzles; i++) {
-            let attempt = 0;
-            let puzzleWords = [];
-            let lastError = '';
-            while (attempt < 10 && puzzleWords.length !== wordsPerPuzzle) {
-                attempt++;
-                // Build a prompt for this puzzle, listing already used words
-                const usedWords = Array.from(allWords).join(', ');
+        const topics = category.split(',').map(t => t.trim());
+        const numPuzzles = topics.length; // Use number of topics as number of puzzles
+        
+        event.sender.send('ollama-wordlist-stream', { 
+            type: 'progress',
+            total: numPuzzles,
+            current: 0,
+            status: 'Starting word list generation...',
+            phase: 'init'
+        });
+
+        // Process all puzzles in parallel
+        const puzzlePromises = Array(numPuzzles).fill().map(async (_, i) => {
+            try {
+                event.sender.send('ollama-wordlist-stream', {
+                    type: 'progress',
+                    total: numPuzzles,
+                    current: i,
+                    status: `Generating puzzle ${i + 1}/${numPuzzles} (${topics[i]})...`,
+                    phase: 'generating'
+                });
+
+                // Generate words for this puzzle
                 const prompt = promptTemplate
-                    .replace(/{{category}}/g, category)
-                    .replace(/{{wordsPerPuzzle}}/g, wordsPerPuzzle)
-                    .replace(/{{usedWords}}/g, usedWords);
+                    .replace(/{{category}}/g, topics[i])
+                    .replace(/{{wordsPerPuzzle}}/g, wordsPerPuzzle);
 
-                if (typeof ollama.generate !== 'function') {
-                    throw new Error('Ollama API: generate() is not a function. Check your ollama npm package version and import.');
-                }
+                const result = await ollama.generate({
+                    model: 'llama3.2',
+                    prompt,
+                    stream: false,
+                    options: { temperature: 0.3 }
+                });
 
-                let response = '';
-                let streamingSupported = false;
-                try {
-                    const result = ollama.generate({
-                        model: 'llama3.2',
-                        prompt,
-                        stream: false,
-                        options: { temperature: 0.3 }
-                    });
-                    if (typeof result.then === 'function') {
-                        // Await the result
-                        const res = await result;
-                        response = res.response;
-                    }
-                } catch (err) {
-                    lastError = err.message;
-                    continue;
-                }
-                // Parse the response: expect comma-separated words, possibly with newlines
-                let line = response.trim().split('\n').find(l => l.includes(','));
-                if (!line) line = response.trim();
-                puzzleWords = line.split(',').map(w => w.trim()).filter(w => w.length > 0);
-                // Remove any words already used
-                puzzleWords = puzzleWords.filter(w => !allWords.has(w.toLowerCase()));
-                // Remove duplicates in this puzzle
-                puzzleWords = [...new Set(puzzleWords.map(w => w.toLowerCase()))];
-                if (puzzleWords.length > wordsPerPuzzle) {
-                    puzzleWords = puzzleWords.slice(0, wordsPerPuzzle);
-                }
-                if (puzzleWords.length !== wordsPerPuzzle) {
-                    lastError = `Attempt ${attempt}: Expected ${wordsPerPuzzle} unique words, got ${puzzleWords.length}. Retrying...`;
-                }
+                // Parse words from response
+                const line = result.response.trim().split('\n').find(l => l.includes(',')) || result.response.trim();
+                const words = line.split(',')
+                    .map(w => w.trim())
+                    .filter(w => w.length > 0)
+                    .slice(0, wordsPerPuzzle);
+
+                event.sender.send('ollama-wordlist-stream', {
+                    type: 'progress',
+                    total: numPuzzles,
+                    current: i + 1,
+                    status: `Completed puzzle ${i + 1}/${numPuzzles}`,
+                    phase: 'completed'
+                });
+
+                return { index: i, words };
+            } catch (error) {
+                event.sender.send('ollama-wordlist-stream', {
+                    type: 'error',
+                    puzzleIndex: i,
+                    error: error.message
+                });
+                throw error;
             }
-            if (puzzleWords.length !== wordsPerPuzzle) {
-                event.sender.send('ollama-wordlist-stream', { type: 'error', error: `Failed to generate puzzle #${i+1} after 10 attempts. Last error: ${lastError}` });
-                return { success: false, error: `Failed to generate puzzle #${i+1} after 10 attempts. Last error: ${lastError}` };
-            }
-            puzzles.push(puzzleWords);
-            puzzleWords.forEach(w => allWords.add(w.toLowerCase()));
-            // Stream this puzzle's words to the frontend
-            wordList += (i > 0 ? separator : '') + puzzleWords.join(',');
-            event.sender.send('ollama-wordlist-stream', { type: 'chunk', data: (i > 0 ? separator : '') + puzzleWords.join(',') });
+        });
+
+        // Wait for all puzzles to complete
+        const results = await Promise.allSettled(puzzlePromises);
+        const successfulResults = results
+            .filter(r => r.status === 'fulfilled')
+            .map(r => r.value)
+            .sort((a, b) => a.index - b.index);
+
+        if (successfulResults.length === 0) {
+            throw new Error('Failed to generate any puzzles. Please try again.');
         }
+
+        // Build final word list
+        for (const { words } of successfulResults) {
+            puzzles.push(words);
+            wordList += (wordList ? separator : '') + words.join(',');
+        }
+
         event.sender.send('ollama-wordlist-stream', { type: 'end', data: wordList });
         return { success: true, wordList };
     } catch (error) {
@@ -394,15 +406,20 @@ app.on('activate', () => {
 // IPC Handlers
 ipcMain.handle('generate-puzzles', async (event, config) => {
     try {
-        const { numPuzzles, wordsPerPuzzle, separator, wordInput } = config;
+        const { wordsPerPuzzle, separator, wordInput } = config;
+        
+        // Count topics to determine number of puzzles
+        const numPuzzles = (wordInput.match(/,/g) || []).length + 1;
         
         const puzzleGroups = wordInput.split(separator).map(group => 
             group.trim().split(',').map(word => word.trim()).filter(word => word.length > 0)
         );
 
         const puzzles = [];
-        for (let i = 0; i < Math.min(numPuzzles, puzzleGroups.length); i++) {
-            const words = puzzleGroups[i].slice(0, wordsPerPuzzle);
+        // Cycle through puzzle groups if we need more puzzles than we have groups
+        for (let i = 0; i < numPuzzles; i++) {
+            const groupIndex = i % puzzleGroups.length; // Cycle through groups
+            const words = puzzleGroups[groupIndex].slice(0, wordsPerPuzzle);
             const puzzle = generator.generatePuzzle(words);
             puzzles.push(puzzle);
         }
