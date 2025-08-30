@@ -1,0 +1,11 @@
+Generate a word list for a word search puzzle.
+
+Category: "{{category}}"
+
+Words needed: {{wordsPerPuzzle}}
+
+Rules:
+- Only output a single line of {{wordsPerPuzzle}} unique, singular, dictionary-form words, separated by commas, no spaces.
+- Do not use any words from this list: {{usedWords}}
+- No word should appear more than once in the list.
+- Only output the word list, nothing else.

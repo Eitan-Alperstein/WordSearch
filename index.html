@@ -266,7 +266,7 @@
             <form id="puzzleForm">
                 <div class="form-group">
                     <label for="numPuzzles">Number of Puzzles</label>
-                    <input type="number" id="numPuzzles" class="form-control" value="2" min="1" max="20">
+                    <input type="number" id="numPuzzles" class="form-control" value="2" min="1" max="100">
                 </div>
                 
                 <div class="form-group">
@@ -274,14 +274,15 @@
                     <input type="number" id="wordsPerPuzzle" class="form-control" value="8" min="1" max="15">
                 </div>
                 
-                <div class="form-group">
-                    <label for="separator">Page Separator</label>
-                    <input type="text" id="separator" class="form-control" value="|" placeholder="e.g., |, ---, NEXT">
-                </div>
+
                 
                 <div class="form-group">
-                    <label for="wordInput">Word List</label>
-                    <textarea id="wordInput" class="form-control" placeholder="Enter words separated by commas. Use separator to create new puzzles.&#10;&#10;Example:&#10;cat, dog, bird, fish, mouse, elephant | apple, banana, orange, grape, cherry, strawberry"></textarea>
+                    <label for="category">Word Category</label>
+                    <input type="text" id="category" class="form-control" placeholder="e.g., Animals, Fruits, Sports">
+                </div>
+                <div class="form-group" id="wordListGroup" style="display:none;">
+                    <label for="wordInput">Word List (auto-filled by AI)</label>
+                    <textarea id="wordInput" class="form-control" readonly></textarea>
                 </div>
                 
                 <button type="submit" class="btn" id="generateBtn">
@@ -313,7 +314,13 @@
                 
                 <div id="loadingState" class="loading-spinner">
                     <div class="spinner"></div>
-                    <p>Generating your puzzles...</p>
+                    <div style="margin: 1rem 0;">
+                        <div id="progressBarContainer" style="width: 100%; background: #e1e5e9; border-radius: 8px; height: 18px; overflow: hidden; margin-bottom: 0.5rem; display: none;">
+                            <div id="progressBar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); transition: width 0.2s;"></div>
+                        </div>
+                        <div id="progressStatus" style="color: #667eea; font-size: 1rem; text-align: center; min-height: 1.5em;"></div>
+                    </div>
+                    <p id="loadingText">Generating your puzzles...</p>
                 </div>
                 
                 <div id="pdfContainer" class="pdf-container" style="display: none;">
@@ -336,27 +343,134 @@
         
         let currentPdfPath = null;
         
+        // --- Streaming Ollama word list to textarea ---
+        let streamingWordList = '';
+        let streamingActive = false;
+        let progressTimer = null;
+        let progressElapsed = 0;
+        let progressTotal = 0;
+        let progressConstant = 1.2; // seconds per word (tweak as needed)
+        let progressStatusInterval = null;
+
+        function startProgressBar(numPuzzles, wordsPerPuzzle) {
+            clearProgressBar();
+            progressElapsed = 0;
+            progressTotal = Math.max(2, Math.round(progressConstant * numPuzzles * wordsPerPuzzle));
+            document.getElementById('progressBarContainer').style.display = 'block';
+            document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('progressStatus').textContent = 'Starting AI word list generation...';
+            progressTimer = setInterval(() => {
+                progressElapsed++;
+                let percent = Math.min(100, Math.round((progressElapsed / progressTotal) * 100));
+                document.getElementById('progressBar').style.width = percent + '%';
+                if (progressElapsed < progressTotal) {
+                    document.getElementById('progressStatus').textContent = `Generating puzzle words... (${percent}%)`;
+                } else {
+                    document.getElementById('progressStatus').textContent = 'Waiting for AI response...';
+                }
+            }, 1000);
+            // Optionally, update status every 2s to show activity
+            let dots = 0;
+            progressStatusInterval = setInterval(() => {
+                if (progressElapsed >= progressTotal) {
+                    let msg = 'Still working, please wait';
+                    dots = (dots + 1) % 4;
+                    document.getElementById('progressStatus').textContent = msg + '.'.repeat(dots);
+                }
+            }, 2000);
+        }
+
+        function clearProgressBar() {
+            if (progressTimer) clearInterval(progressTimer);
+            if (progressStatusInterval) clearInterval(progressStatusInterval);
+            document.getElementById('progressBarContainer').style.display = 'none';
+            document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('progressStatus').textContent = '';
+        }
+
+        ipcRenderer.on('ollama-wordlist-stream', (event, msg) => {
+            if (msg.type === 'start') {
+                streamingWordList = '';
+                streamingActive = true;
+                document.getElementById('wordInput').value = '';
+                document.getElementById('wordListGroup').style.display = 'block';
+                // Start progress bar
+                const numPuzzles = parseInt(document.getElementById('numPuzzles').value);
+                const wordsPerPuzzle = parseInt(document.getElementById('wordsPerPuzzle').value);
+                startProgressBar(numPuzzles, wordsPerPuzzle);
+            } else if (msg.type === 'chunk') {
+                streamingWordList += msg.data;
+                document.getElementById('wordInput').value = streamingWordList;
+                document.getElementById('wordInput').scrollTop = document.getElementById('wordInput').scrollHeight;
+            } else if (msg.type === 'end') {
+                streamingActive = false;
+                document.getElementById('wordInput').value = msg.data.trim();
+                clearProgressBar();
+            } else if (msg.type === 'error') {
+                streamingActive = false;
+                showLoading(false);
+                showMessage('AI error: ' + msg.error, 'error');
+                clearProgressBar();
+            }
+        });
+
         document.getElementById('puzzleForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
-            const config = {
-                numPuzzles: parseInt(document.getElementById('numPuzzles').value),
-                wordsPerPuzzle: parseInt(document.getElementById('wordsPerPuzzle').value),
-                separator: document.getElementById('separator').value,
-                wordInput: document.getElementById('wordInput').value.trim()
-            };
-            
-            if (!config.wordInput) {
-                showMessage('Please enter some words for the puzzle.', 'error');
+            clearMessages();
+            showLoading(true);
+
+            const numPuzzles = parseInt(document.getElementById('numPuzzles').value);
+            const wordsPerPuzzle = parseInt(document.getElementById('wordsPerPuzzle').value);
+            const separator = '|';
+            const category = document.getElementById('category').value.trim();
+
+            if (!category) {
+                showLoading(false);
+                showMessage('Please enter a category for the word search.', 'error');
                 return;
             }
-            
-            showLoading(true);
-            clearMessages();
-            
+
+            // Step 1: Ask Llama for a word list (streamed)
+            streamingWordList = '';
+            streamingActive = true;
+            document.getElementById('wordInput').value = '';
+            document.getElementById('wordListGroup').style.display = 'block';
+
+            let aiResult;
+            try {
+                aiResult = await ipcRenderer.invoke('generate-word-list', {
+                    category,
+                    numPuzzles,
+                    wordsPerPuzzle,
+                    separator
+                });
+            } catch (err) {
+                showLoading(false);
+                showMessage('Failed to generate word list: ' + err.message, 'error');
+                streamingActive = false;
+                return;
+            }
+
+            if (!aiResult.success) {
+                showLoading(false);
+                showMessage('AI error: ' + aiResult.error, 'error');
+                streamingActive = false;
+                return;
+            }
+
+            // Step 2: Generate puzzles as before, using the AI word list
+            const wordList = aiResult.wordList.trim();
+            document.getElementById('wordInput').value = wordList;
+            streamingActive = false;
+
+            const config = {
+                numPuzzles,
+                wordsPerPuzzle,
+                separator,
+                wordInput: wordList
+            };
             try {
                 const result = await ipcRenderer.invoke('generate-puzzles', config);
-                
                 if (result.success) {
                     currentPdfPath = result.filename;
                     showPdf(result.filename);
@@ -396,17 +510,25 @@
         function showLoading(show) {
             document.getElementById('loadingState').classList.toggle('active', show);
             document.getElementById('generateBtn').disabled = show;
-            
             if (show) {
                 document.getElementById('emptyState').style.display = 'none';
                 document.getElementById('pdfContainer').style.display = 'none';
+            } else {
+                clearProgressBar();
             }
         }
         
         function showPdf(filename) {
             document.getElementById('emptyState').style.display = 'none';
             document.getElementById('pdfContainer').style.display = 'flex';
-            document.getElementById('pdfEmbed').src = filename;
+            // Ensure file:// protocol for local files
+            let fileUrl = filename;
+            if (!/^file:/.test(filename)) {
+                const path = require('path');
+                const resolved = path.resolve(filename);
+                fileUrl = 'file://' + resolved.replace(/\\/g, '/');
+            }
+            document.getElementById('pdfEmbed').src = fileUrl;
         }
         
         function showStats(puzzles, config) {
@@ -444,8 +566,8 @@
             document.getElementById('messages').innerHTML = '';
         }
         
-        // Example word list
-        document.getElementById('wordInput').value = 'cat, dog, bird, fish, mouse, elephant, tiger, lion | apple, banana, orange, grape, cherry, strawberry, peach, mango';
+        // Hide word list group by default
+        document.getElementById('wordListGroup').style.display = 'none';
     </script>
 </body>
 </html>
