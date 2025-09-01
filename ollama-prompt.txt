@@ -18,6 +18,9 @@ Rules:
 - Don't use any complex words
 - Don't use any word longer than 15 characters
 - Do not ever generate words with spaces
+- Do not be creative with the words; each word should seem very obviously be connected to the category for a majority of people.
+- Don't use acronyms
+- Make sure that all words generated are the same category (ie: don't generate the words "football" and "broncos"; instead, generate "broncos" and "chargers")
 
 Example output format for 4 words:
 cat,dog,bird,London

@@ -15,12 +15,7 @@ ipcMain.handle('generate-topics', async (event) => {
     console.log('\n=== GENERATING 55 TOPICS ===');
     
     try {
-        const prompt = `Generate exactly 55 unique word search puzzle topics. Each topic should be 1-3 words maximum and suitable for word puzzles. Include a mix of: animals, foods, sports, countries, professions, hobbies, school subjects, nature, technology, and entertainment.
-
-Output format: topic1,topic2,topic3...
-Example: Animals,Pizza,Soccer,France,Doctor,Reading,Math,Trees,Computers,Movies
-
-Only output the comma-separated list, nothing else.`;
+        const prompt = fs.readFileSync(path.join(__dirname, 'topic-prompt.txt'), 'utf8');
 
         const result = await ollama.generate({
             model: 'llama3.2',

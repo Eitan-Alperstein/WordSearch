@@ -1,0 +1,10 @@
+Generate exactly 55 unique word search puzzle topics. Each topic should be 1-3 words maximum and suitable for word puzzles. Include a mix of: animals, foods, sports, countries, professions, hobbies, school subjects, nature, technology, and entertainment.
+
+Output format: topic1,topic2,topic3...
+
+Follow the following rules, without exception:
+- Always choose kid-friendly and even kid-oriented topics
+- Choose general and broad topics, like Sports or Animals, instead of very specific nouns, like Soccer or Rabbit
+- Don't choose anything that most people wouldn't know
+
+Only output the comma-separated list, nothing else.
