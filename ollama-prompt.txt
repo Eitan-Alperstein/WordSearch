@@ -5,11 +5,19 @@ Topic: "{{category}}"
 Generate exactly {{wordsPerPuzzle}} words related to this topic.
 
 Rules:
-- Only output a single line of {{wordsPerPuzzle}} unique, singular, dictionary-form words, separated by commas, no spaces.
-- Each word must be clearly related to the topic.
-- Words should be simple enough for a word search puzzle.
+- Only output a single line of {{wordsPerPuzzle}} unique, singular words, separated by commas, no spaces.
+- Each word or phrase must be clearly related to the topic.
+- Only use letters from the English alphabet (a-z).
+- For regular words: use all lowercase (e.g., cat, elephant).
+- For proper nouns (names, places): capitalize first letter of each word, rest lowercase (e.g., Leonardo da Vinci, New York).
+- Keep multi-word proper nouns together as one entry (do not split names or places into separate words).
+- Never use ALL CAPS words.
+- Keep words simple enough for a word search puzzle.
 - No word should appear more than once in the list.
 - Only output the word list, nothing else.
+- Don't use any complex words
+- Don't use any word longer than 15 characters
+- Do not ever generate words with spaces
 
 Example output format for 4 words:
-word1,word2,word3,word4
+cat,dog,bird,London

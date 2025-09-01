@@ -18,17 +18,6 @@
             overflow: hidden;
         }
 
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: url('data:image/svg+xml,<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><g fill="%23ffffff" fill-opacity="0.05"><circle cx="30" cy="30" r="1"/></g></svg>');
-            pointer-events: none;
-        }
-
         .container {
             display: flex;
             height: 100vh;
@@ -41,7 +30,6 @@
             border-right: 1px solid rgba(255, 255, 255, 0.2);
             padding: 2rem;
             overflow-y: auto;
-            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
         }
 
         .main-content {
@@ -67,39 +55,6 @@
         .header p {
             color: rgba(255, 255, 255, 0.8);
             font-size: 1.1rem;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.9);
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 0.75rem;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        textarea.form-control {
-            min-height: 120px;
-            resize: vertical;
         }
 
         .btn {
@@ -132,8 +87,51 @@
             color: #333;
         }
 
-        .btn-secondary:hover {
-            box-shadow: 0 10px 25px rgba(252, 182, 159, 0.3);
+        .progress-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            display: none;
+        }
+
+        .progress-container.active {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            color: white;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .status-text {
+            color: rgba(255, 255, 255, 0.9);
+            margin: 1rem 0;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            display: none;
+        }
+
+        .status-text.active {
+            display: block;
         }
 
         .pdf-viewer {
@@ -151,6 +149,10 @@
             border-radius: 12px;
             box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
             overflow: hidden;
+            display: none;
+        }
+
+        .pdf-container.active {
             display: flex;
             flex-direction: column;
         }
@@ -176,32 +178,6 @@
             border: none;
         }
 
-        .loading-spinner {
-            display: none;
-            text-align: center;
-            padding: 2rem;
-            color: #667eea;
-        }
-
-        .loading-spinner.active {
-            display: block;
-        }
-
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid #e1e5e9;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
         .empty-state {
             text-align: center;
             color: rgba(255, 255, 255, 0.6);
@@ -219,109 +195,76 @@
             line-height: 1.6;
         }
 
-        .stats {
+        .phase {
+            margin-bottom: 2rem;
+            padding: 1rem;
             background: rgba(255, 255, 255, 0.1);
             border-radius: 8px;
-            padding: 1rem;
-            margin-top: 1rem;
         }
 
-        .stats h4 {
-            color: rgba(255, 255, 255, 0.9);
-            margin-bottom: 0.5rem;
-        }
-
-        .stats p {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.9rem;
-            margin-bottom: 0.25rem;
-        }
-
-        .error-message {
-            background: #ffe6e6;
-            color: #d63031;
-            padding: 1rem;
-            border-radius: 8px;
+        .phase h3 {
+            color: white;
             margin-bottom: 1rem;
-            border-left: 4px solid #d63031;
         }
 
-        .success-message {
-            background: #e8f5e8;
-            color: #00b894;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            border-left: 4px solid #00b894;
+        .phase.disabled {
+            opacity: 0.5;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="sidebar">
-            <h2 style="margin-bottom: 2rem; color: rgba(255, 255, 255, 0.9);">Puzzle Settings</h2>
+            <h2 style="margin-bottom: 2rem; color: rgba(255, 255, 255, 0.9);">Word Search Generator</h2>
             
-            <div id="messages"></div>
-            
-            <form id="puzzleForm">
-                <div class="form-group">
-                    <label for="wordsPerPuzzle">Words per Puzzle</label>
-                    <input type="number" id="wordsPerPuzzle" class="form-control" value="8" min="1" max="15">
-                </div>
-                
-                <div class="form-group">
-                    <label for="category">Topics (comma-separated)</label>
-                    <input type="text" id="category" class="form-control" placeholder="e.g., Animals,Sports,Countries">
-                    <small style="color: rgba(255, 255, 255, 0.7); margin-top: 0.5rem; display: block;">Each topic will generate one puzzle. Separate topics with commas.</small>
-                </div>
-                <div class="form-group" id="wordListGroup" style="display:none;">
-                    <label for="wordInput">Word List (auto-filled by AI)</label>
-                    <textarea id="wordInput" class="form-control" readonly></textarea>
-                </div>
-                
-                <button type="submit" class="btn" id="generateBtn">
-                    Generate Puzzles
-                </button>
-                
-                <button type="button" class="btn btn-secondary" id="saveBtn" style="display: none;">
-                    Save PDF As...
-                </button>
-            </form>
-            
-            <div class="stats" id="puzzleStats" style="display: none;">
-                <h4>Generation Summary</h4>
-                <p id="statsText"></p>
+            <div class="phase" id="phase1">
+                <h3>Phase 1: Generate Topics</h3>
+                <p style="color: rgba(255, 255, 255, 0.8); margin-bottom: 1rem;">
+                    AI will generate 55 unique puzzle topics automatically.
+                </p>
+                <button class="btn" id="generateTopicsBtn">Generate 55 Topics</button>
             </div>
+
+            <div class="phase disabled" id="phase2">
+                <h3>Phase 2: Create Puzzles</h3>
+                <p style="color: rgba(255, 255, 255, 0.8); margin-bottom: 1rem;">
+                    Generate word search puzzles from the topics.
+                </p>
+                <button class="btn" id="generatePuzzlesBtn" disabled>Create Puzzles</button>
+            </div>
+
+            <div class="phase disabled" id="phase3">
+                <h3>Phase 3: Generate PDF</h3>
+                <p style="color: rgba(255, 255, 255, 0.8); margin-bottom: 1rem;">
+                    Create a PDF with all puzzles and solutions.
+                </p>
+                <button class="btn" id="createPdfBtn" disabled>Create PDF</button>
+                <button class="btn btn-secondary" id="savePdfBtn" style="display: none;">Save PDF As...</button>
+            </div>
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">0%</div>
+            </div>
+
+            <div class="status-text" id="statusText"></div>
         </div>
         
         <div class="main-content">
             <div class="header">
-                <h1>Word Search Generator</h1>
-                <p>Create beautiful PDF word search puzzles with solutions</p>
+                <h1>AI Word Search Generator</h1>
+                <p>Generate 55 professional word search puzzles automatically</p>
             </div>
             
             <div class="pdf-viewer">
                 <div id="emptyState" class="empty-state">
                     <h3>Ready to Generate</h3>
-                    <p>Fill in your puzzle settings and word list to create amazing word search puzzles. Your PDF will appear here with a built-in viewer.</p>
+                    <p>Click "Generate 55 Topics" to start creating your word search puzzle collection.</p>
                 </div>
                 
-                <div id="loadingState" class="loading-spinner">
-                    <div class="spinner"></div>
-                    <div style="margin: 1rem 0;">
-                        <div id="progressBarContainer" style="width: 100%; background: #e1e5e9; border-radius: 8px; height: 18px; overflow: hidden; margin-bottom: 0.5rem;">
-                            <div id="progressBar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); transition: width 0.2s;"></div>
-                        </div>
-                        <div id="progressStatus" style="color: #667eea; font-size: 1rem; text-align: center; min-height: 1.5em; margin-bottom: 1rem;"></div>
-                        <div id="progressDetail" style="color: #667eea; font-size: 0.9rem; text-align: left; margin: 1rem; padding: 1rem; background: rgba(255,255,255,0.1); border-radius: 8px;">
-                            <div>Topics to Process: <span id="totalPuzzles">0</span></div>
-                            <div>Topics Completed: <span id="completedPuzzles">0</span></div>
-                            <div>Words Generated: <span id="generatedWords">0</span></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div id="pdfContainer" class="pdf-container" style="display: none;">
+                <div id="pdfContainer" class="pdf-container">
                     <div class="pdf-toolbar">
                         <span id="pdfTitle">Word Search Puzzles</span>
                         <button class="btn btn-secondary" id="openExternalBtn" style="padding: 0.5rem 1rem; width: auto;">
@@ -340,209 +283,155 @@
         const { ipcRenderer, shell } = require('electron');
         
         let currentPdfPath = null;
-        
-        // --- Streaming Ollama word list to textarea ---
-        let streamingWordList = '';
-        let streamingActive = false;
-        let progressTimer = null;
-        let progressElapsed = 0;
-        let progressTotal = 0;
-        let progressConstant = 1.2; // seconds per word (tweak as needed)
-        let progressStatusInterval = null;
+        let generatedTopics = [];
 
-        function startProgressBar(numPuzzles, wordsPerPuzzle) {
-            clearProgressBar();
-            progressElapsed = 0;
-            progressTotal = Math.max(2, Math.round(progressConstant * numPuzzles * wordsPerPuzzle));
-            document.getElementById('progressBarContainer').style.display = 'block';
-            document.getElementById('progressBar').style.width = '0%';
-            document.getElementById('progressStatus').textContent = 'Starting AI word list generation...';
-            progressTimer = setInterval(() => {
-                progressElapsed++;
-                let percent = Math.min(100, Math.round((progressElapsed / progressTotal) * 100));
-                document.getElementById('progressBar').style.width = percent + '%';
-                if (progressElapsed < progressTotal) {
-                    document.getElementById('progressStatus').textContent = `Generating puzzle words... (${percent}%)`;
+        // Phase 1: Generate Topics
+        document.getElementById('generateTopicsBtn').addEventListener('click', async () => {
+            showProgress('Generating 55 topics with AI...');
+            disableButton('generateTopicsBtn');
+
+            try {
+                const result = await ipcRenderer.invoke('generate-topics');
+                
+                if (result.success) {
+                    generatedTopics = result.topics;
+                    showStatus(`✓ Generated ${result.topics.length} topics successfully!`);
+                    enablePhase2();
                 } else {
-                    document.getElementById('progressStatus').textContent = 'Waiting for AI response...';
+                    showStatus(`✗ Failed to generate topics: ${result.error}`);
+                    enableButton('generateTopicsBtn');
                 }
-            }, 1000);
-            // Optionally, update status every 2s to show activity
-            let dots = 0;
-            progressStatusInterval = setInterval(() => {
-                if (progressElapsed >= progressTotal) {
-                    let msg = 'Still working, please wait';
-                    dots = (dots + 1) % 4;
-                    document.getElementById('progressStatus').textContent = msg + '.'.repeat(dots);
-                }
-            }, 2000);
-        }
-
-        function clearProgressBar() {
-            if (progressTimer) clearInterval(progressTimer);
-            if (progressStatusInterval) clearInterval(progressStatusInterval);
-            document.getElementById('progressBarContainer').style.display = 'none';
-            document.getElementById('progressBar').style.width = '0%';
-            document.getElementById('progressStatus').textContent = '';
-        }
-
-        ipcRenderer.on('ollama-wordlist-stream', (event, msg) => {
-            if (msg.type === 'progress') {
-                document.getElementById('progressBarContainer').style.display = 'block';
-                document.getElementById('totalPuzzles').textContent = msg.total;
-                document.getElementById('completedPuzzles').textContent = msg.current;
-                
-                if (msg.currentAttempt) {
-                    document.getElementById('currentAttempt').textContent = msg.currentAttempt;
-                }
-
-                // Calculate progress percentage based on completed puzzles
-                const percent = Math.round((msg.current / msg.total) * 100);
-                document.getElementById('progressBar').style.width = `${percent}%`;
-                document.getElementById('progressStatus').textContent = msg.status;
-
-                // Update generated words count if we have wordList
-                if (streamingWordList) {
-                    const words = streamingWordList.split(/[|,]/).filter(w => w.trim()).length;
-                    document.getElementById('generatedWords').textContent = words;
-                }
-
-            } else if (msg.type === 'chunk') {
-                streamingWordList += msg.data;
-                document.getElementById('wordInput').value = streamingWordList;
-                document.getElementById('wordInput').scrollTop = document.getElementById('wordInput').scrollHeight;
-                
-                // Update word count
-                const words = streamingWordList.split(/[|,]/).filter(w => w.trim()).length;
-                document.getElementById('generatedWords').textContent = words;
-            } else if (msg.type === 'end') {
-                streamingActive = false;
-                document.getElementById('wordInput').value = msg.data.trim();
-                document.getElementById('progressStatus').textContent = 'Generation complete!';
-            } else if (msg.type === 'error') {
-                streamingActive = false;
-                showLoading(false);
-                showMessage('AI error: ' + msg.error, 'error');
-                document.getElementById('progressStatus').textContent = 'Error: ' + msg.error;
+            } catch (error) {
+                showStatus(`✗ Error: ${error.message}`);
+                enableButton('generateTopicsBtn');
             }
+
+            hideProgress();
         });
 
-        document.getElementById('puzzleForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            clearMessages();
-            showLoading(true);
+        // Phase 2: Generate Puzzles
+        document.getElementById('generatePuzzlesBtn').addEventListener('click', async () => {
+            showProgress('Creating puzzles...');
+            disableButton('generatePuzzlesBtn');
 
-            const wordsPerPuzzle = parseInt(document.getElementById('wordsPerPuzzle').value);
-            const separator = '|';
-            const category = document.getElementById('category').value.trim();
+            // Listen for progress updates
+            ipcRenderer.on('puzzle-progress', (event, data) => {
+                updateProgress(data.current, data.total, data.status);
+            });
 
-            if (!category) {
-                showLoading(false);
-                showMessage('Please enter topics for the word search puzzles.', 'error');
-                return;
-            }
-            
-            const topics = category.split(',').map(t => t.trim()).filter(t => t);
-            if (topics.length === 0) {
-                showLoading(false);
-                showMessage('Please enter at least one topic.', 'error');
-                return;
-            }
-            
-            const numPuzzles = topics.length;
-
-            // Step 1: Ask Llama for a word list (streamed)
-            streamingWordList = '';
-            streamingActive = true;
-            document.getElementById('wordInput').value = '';
-            document.getElementById('wordListGroup').style.display = 'block';
-
-            let aiResult;
             try {
-                aiResult = await ipcRenderer.invoke('generate-word-list', {
-                    category,
-                    numPuzzles,
-                    wordsPerPuzzle,
-                    separator
-                });
-            } catch (err) {
-                showLoading(false);
-                showMessage('Failed to generate word list: ' + err.message, 'error');
-                streamingActive = false;
-                return;
+                const result = await ipcRenderer.invoke('generate-puzzles');
+                
+                if (result.success) {
+                    showStatus(`✓ Created ${result.successCount} puzzles (${result.skipCount} skipped)`);
+                    enablePhase3();
+                } else {
+                    showStatus(`✗ Failed to generate puzzles: ${result.error}`);
+                    enableButton('generatePuzzlesBtn');
+                }
+            } catch (error) {
+                showStatus(`✗ Error: ${error.message}`);
+                enableButton('generatePuzzlesBtn');
             }
 
-            if (!aiResult.success) {
-                showLoading(false);
-                showMessage('AI error: ' + aiResult.error, 'error');
-                streamingActive = false;
-                return;
-            }
+            // Remove progress listener
+            ipcRenderer.removeAllListeners('puzzle-progress');
+            hideProgress();
+        });
 
-            // Step 2: Generate puzzles as before, using the AI word list
-            const wordList = aiResult.wordList.trim();
-            document.getElementById('wordInput').value = wordList;
-            streamingActive = false;
+        // Phase 3: Create PDF
+        document.getElementById('createPdfBtn').addEventListener('click', async () => {
+            showProgress('Creating PDF...');
+            disableButton('createPdfBtn');
 
-            const config = {
-                numPuzzles,
-                wordsPerPuzzle,
-                separator,
-                wordInput: wordList
-            };
             try {
-                const result = await ipcRenderer.invoke('generate-puzzles', config);
+                const result = await ipcRenderer.invoke('create-pdf');
+                
                 if (result.success) {
                     currentPdfPath = result.filename;
                     showPdf(result.filename);
-                    showStats(result.puzzles, config);
-                    showMessage('Puzzles generated successfully!', 'success');
-                    document.getElementById('saveBtn').style.display = 'block';
+                    showStatus('✓ PDF created successfully!');
+                    document.getElementById('savePdfBtn').style.display = 'block';
                 } else {
-                    showMessage(`Error: ${result.error}`, 'error');
+                    showStatus(`✗ Failed to create PDF: ${result.error}`);
+                    enableButton('createPdfBtn');
                 }
             } catch (error) {
-                showMessage(`Unexpected error: ${error.message}`, 'error');
-            } finally {
-                showLoading(false);
+                showStatus(`✗ Error: ${error.message}`);
+                enableButton('createPdfBtn');
             }
+
+            hideProgress();
         });
-        
-        document.getElementById('saveBtn').addEventListener('click', async () => {
+
+        // Save PDF
+        document.getElementById('savePdfBtn').addEventListener('click', async () => {
             if (!currentPdfPath) return;
             
             try {
                 const result = await ipcRenderer.invoke('save-pdf-as', currentPdfPath);
                 
                 if (result.success && !result.canceled) {
-                    showMessage(`PDF saved to: ${result.filePath}`, 'success');
+                    showStatus(`✓ PDF saved to: ${result.filePath}`);
                 }
             } catch (error) {
-                showMessage(`Error saving PDF: ${error.message}`, 'error');
+                showStatus(`✗ Error saving PDF: ${error.message}`);
             }
         });
-        
+
+        // Open PDF externally
         document.getElementById('openExternalBtn').addEventListener('click', () => {
             if (currentPdfPath) {
                 shell.openPath(currentPdfPath);
             }
         });
-        
-        function showLoading(show) {
-            document.getElementById('loadingState').classList.toggle('active', show);
-            document.getElementById('generateBtn').disabled = show;
-            if (show) {
-                document.getElementById('emptyState').style.display = 'none';
-                document.getElementById('pdfContainer').style.display = 'none';
-            } else {
-                clearProgressBar();
-            }
+
+        // Helper functions
+        function showProgress(message) {
+            document.getElementById('progressContainer').classList.add('active');
+            document.getElementById('progressText').textContent = message;
+            document.getElementById('progressFill').style.width = '0%';
         }
-        
+
+        function updateProgress(current, total, message) {
+            const percentage = Math.round((current / total) * 100);
+            document.getElementById('progressFill').style.width = `${percentage}%`;
+            document.getElementById('progressText').textContent = `${current}/${total} - ${message}`;
+        }
+
+        function hideProgress() {
+            document.getElementById('progressContainer').classList.remove('active');
+        }
+
+        function showStatus(message) {
+            const statusEl = document.getElementById('statusText');
+            statusEl.textContent = message;
+            statusEl.classList.add('active');
+            setTimeout(() => statusEl.classList.remove('active'), 5000);
+        }
+
+        function disableButton(id) {
+            document.getElementById(id).disabled = true;
+        }
+
+        function enableButton(id) {
+            document.getElementById(id).disabled = false;
+        }
+
+        function enablePhase2() {
+            document.getElementById('phase2').classList.remove('disabled');
+            enableButton('generatePuzzlesBtn');
+        }
+
+        function enablePhase3() {
+            document.getElementById('phase3').classList.remove('disabled');
+            enableButton('createPdfBtn');
+        }
+
         function showPdf(filename) {
             document.getElementById('emptyState').style.display = 'none';
-            document.getElementById('pdfContainer').style.display = 'flex';
-            // Ensure file:// protocol for local files
+            document.getElementById('pdfContainer').classList.add('active');
+            
             let fileUrl = filename;
             if (!/^file:/.test(filename)) {
                 const path = require('path');
@@ -551,44 +440,6 @@
             }
             document.getElementById('pdfEmbed').src = fileUrl;
         }
-        
-        function showStats(puzzles, config) {
-            const statsElement = document.getElementById('puzzleStats');
-            const statsText = document.getElementById('statsText');
-            
-            let totalWords = 0;
-            puzzles.forEach(puzzle => {
-                totalWords += puzzle.placedWords.length;
-            });
-            
-            statsText.innerHTML = `
-                <strong>${puzzles.length}</strong> puzzle(s) created<br>
-                <strong>${totalWords}</strong> words placed successfully<br>
-                Grid size: <strong>15x15</strong><br>
-                Pages: <strong>${puzzles.length * 2}</strong> (puzzles + solutions)
-            `;
-            
-            statsElement.style.display = 'block';
-        }
-        
-        function showMessage(message, type) {
-            const messagesContainer = document.getElementById('messages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
-            messageDiv.textContent = message;
-            messagesContainer.appendChild(messageDiv);
-            
-            setTimeout(() => {
-                messageDiv.remove();
-            }, 5000);
-        }
-        
-        function clearMessages() {
-            document.getElementById('messages').innerHTML = '';
-        }
-        
-        // Hide word list group by default
-        document.getElementById('wordListGroup').style.display = 'none';
     </script>
 </body>
 </html>
