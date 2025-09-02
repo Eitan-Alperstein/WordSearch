@@ -251,6 +251,14 @@
                 <button class="btn btn-secondary" id="savePdfBtn" style="display: none;">Save PDF As...</button>
             </div>
 
+            <div class="phase disabled" id="phase4">
+                <h3>Phase 4: Design Cover</h3>
+                <p style="color: rgba(255, 255, 255, 0.8); margin-bottom: 1rem;">
+                    Design a custom cover for your word search book.
+                </p>
+                <button class="btn" id="designCoverBtn" disabled>Design Cover</button>
+            </div>
+
             <div class="progress-container" id="progressContainer">
                 <div class="progress-bar">
                     <div class="progress-fill" id="progressFill"></div>
@@ -382,6 +390,7 @@
                     showPdf(result.filename);
                     showStatus('✓ PDF created successfully!');
                     document.getElementById('savePdfBtn').style.display = 'block';
+                    enablePhase4();
                 } else {
                     showStatus(`✗ Failed to create PDF: ${result.error}`);
                     enableButton('createPdfBtn');
@@ -392,6 +401,15 @@
             }
 
             hideProgress();
+        });
+
+        // Phase 4: Design Cover
+        document.getElementById('designCoverBtn').addEventListener('click', async () => {
+            try {
+                await ipcRenderer.invoke('open-cover-designer');
+            } catch (error) {
+                showStatus(`✗ Error: ${error.message}`);
+            }
         });
 
         // Save PDF
@@ -461,6 +479,11 @@
         function enablePhase4() {
             document.getElementById('phase4').classList.remove('disabled');
             enableButton('createPdfBtn');
+        }
+
+        function enablePhase4() {
+            document.getElementById('phase4').classList.remove('disabled');
+            enableButton('designCoverBtn');
         }
 
         function showPdf(filename) {

@@ -13,6 +13,7 @@ Rules:
 - Keep words simple enough for children to understand.
 - No word should appear more than once in the list.
 - Only output the word list, nothing else.
+<<<<<<< HEAD
 - Use only simple, common words that a 8-year-old child would know.
 - Don't use any word longer than 10 characters.
 - Do not ever generate words with spaces.
@@ -22,6 +23,14 @@ Rules:
 - No medical terms, body parts (except basic ones like hand, foot), or anything potentially sensitive.
 - Stick to positive, cheerful, family-friendly words only.
 - Make sure all words are things children would commonly see, use, or know about.
+=======
+- Don't use any complex words
+- Don't use any word longer than 15 characters
+- Do not ever generate words with spaces
+- Do not be creative with the words; each word should seem very obviously be connected to the category for a majority of people.
+- Don't use acronyms
+- Make sure that all words generated are the same category (ie: don't generate the words "football" and "broncos"; instead, generate "broncos" and "chargers")
+>>>>>>> c7eb259a693b1f05ff63e91ae015b1790aa92e4e
 
 Example output format for 4 words:
 cat,dog,bird,fish

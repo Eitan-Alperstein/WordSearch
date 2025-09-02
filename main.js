@@ -252,6 +252,35 @@ async function createPDF(puzzles, filename) {
     });
 }
 
+async function createPDFWithCover(puzzles, filename, coverImageBuffer) {
+    return new Promise((resolve, reject) => {
+        const doc = new PDFDocument({ size: 'A4', margin: 0 });
+        const stream = fs.createWriteStream(filename);
+        doc.pipe(stream);
+
+        // Add cover page
+        const pageWidth = doc.page.width;
+        const pageHeight = doc.page.height;
+        doc.image(coverImageBuffer, 0, 0, { width: pageWidth, height: pageHeight });
+
+        // Add puzzle pages
+        puzzles.forEach((puzzle, index) => {
+            doc.addPage({ margin: 50 });
+            addPuzzlePage(doc, puzzle, index + 1);
+        });
+
+        // Add solution pages
+        puzzles.forEach((puzzle, index) => {
+            doc.addPage({ margin: 50 });
+            addSolutionPage(doc, puzzle, index + 1);
+        });
+
+        doc.end();
+        stream.on('finish', () => resolve(filename));
+        stream.on('error', reject);
+    });
+}
+
 function addPuzzlePage(doc, puzzle, pageNumber) {
     const { grid, placedWords, category } = puzzle;
     const gridSize = 15;
@@ -276,8 +305,15 @@ function addPuzzlePage(doc, puzzle, pageNumber) {
         for (let j = 0; j < gridSize; j++) {
             const x = startX + j * cellSize;
             const y = startY + i * cellSize;
-            doc.fontSize(14).font('Helvetica')
-               .text(grid[i][j], x + cellSize/2 - 6, y + cellSize/2 - 9, { width: 12, align: 'center' });
+            const letter = grid[i][j];
+            
+            // Center each letter properly
+            doc.fontSize(14).font('Helvetica');
+            const letterWidth = doc.widthOfString(letter);
+            const letterX = x + (cellSize - letterWidth) / 2;
+            const letterY = y + cellSize/2 - 5;
+            
+            doc.text(letter, letterX, letterY);
         }
     }
 
@@ -322,8 +358,15 @@ function addSolutionPage(doc, puzzle, pageNumber) {
         for (let j = 0; j < gridSize; j++) {
             const x = startX + j * cellSize;
             const y = startY + i * cellSize;
-            doc.fontSize(14).font('Helvetica')
-               .text(grid[i][j], x + cellSize/2 - 6, y + cellSize/2 - 9, { width: 12, align: 'center' });
+            const letter = grid[i][j];
+            
+            // Center each letter properly
+            doc.fontSize(14).font('Helvetica');
+            const letterWidth = doc.widthOfString(letter);
+            const letterX = x + (cellSize - letterWidth) / 2;
+            const letterY = y + cellSize/2 - 5;
+            
+            doc.text(letter, letterX, letterY);
         }
     }
 
@@ -363,6 +406,38 @@ function addSolutionPage(doc, puzzle, pageNumber) {
     });
 }
 
+// Add cover to PDF
+ipcMain.handle('add-cover-to-pdf', async (event, coverImageData) => {
+    console.log('\n=== ADDING COVER TO PDF ===');
+    
+    if (generatedPuzzles.length === 0) {
+        return { success: false, error: 'No puzzles available' };
+    }
+    
+    try {
+        // Convert base64 image data to buffer
+        const base64Data = coverImageData.replace(/^data:image\/png;base64,/, '');
+        const imageBuffer = Buffer.from(base64Data, 'base64');
+        
+        const filename = path.join(__dirname, 'temp', `puzzles-with-cover-${Date.now()}.pdf`);
+        
+        // Ensure temp directory exists
+        const tempDir = path.dirname(filename);
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+        }
+        
+        await createPDFWithCover(generatedPuzzles, filename, imageBuffer);
+        console.log(`PDF with cover created: ${filename}`);
+        
+        return { success: true, filename };
+        
+    } catch (error) {
+        console.error('Cover PDF creation failed:', error.message);
+        return { success: false, error: error.message };
+    }
+});
+
 // Save PDF dialog
 ipcMain.handle('save-pdf-as', async (event, currentFilename) => {
     try {
@@ -380,6 +455,12 @@ ipcMain.handle('save-pdf-as', async (event, currentFilename) => {
     } catch (error) {
         return { success: false, error: error.message };
     }
+});
+
+// Navigate to cover designer
+ipcMain.handle('open-cover-designer', async (event) => {
+    mainWindow.loadFile('cover-designer.html');
+    return { success: true };
 });
 
 // Electron app setup
