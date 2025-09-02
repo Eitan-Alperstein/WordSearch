@@ -218,25 +218,34 @@
             <h2 style="margin-bottom: 2rem; color: rgba(255, 255, 255, 0.9);">Word Search Generator</h2>
             
             <div class="phase" id="phase1">
-                <h3>Phase 1: Generate Topics</h3>
+                <h3>Phase 1: Set Category</h3>
                 <p style="color: rgba(255, 255, 255, 0.8); margin-bottom: 1rem;">
-                    AI will generate 55 unique puzzle topics automatically.
+                    Enter a broad category for your 100-page word search book.
                 </p>
-                <button class="btn" id="generateTopicsBtn">Generate 55 Topics</button>
+                <input type="text" id="categoryInput" placeholder="e.g., Tennis, Cooking, History" style="width: 100%; padding: 0.75rem; margin-bottom: 1rem; border: none; border-radius: 6px; font-size: 1rem;">
+                <button class="btn" id="setCategoryBtn">Set Category</button>
             </div>
 
             <div class="phase disabled" id="phase2">
-                <h3>Phase 2: Create Puzzles</h3>
+                <h3>Phase 2: Generate Sub-themes</h3>
                 <p style="color: rgba(255, 255, 255, 0.8); margin-bottom: 1rem;">
-                    Generate word search puzzles from the topics.
+                    AI will generate 100 themed sub-topics within your category.
                 </p>
-                <button class="btn" id="generatePuzzlesBtn" disabled>Create Puzzles</button>
+                <button class="btn" id="generatePuzzlesBtn" disabled>Generate Sub-themes</button>
             </div>
 
             <div class="phase disabled" id="phase3">
-                <h3>Phase 3: Generate PDF</h3>
+                <h3>Phase 3: Create Puzzles</h3>
                 <p style="color: rgba(255, 255, 255, 0.8); margin-bottom: 1rem;">
-                    Create a PDF with all puzzles and solutions.
+                    Generate word search puzzles for each sub-theme.
+                </p>
+                <button class="btn" id="createPuzzlesBtn" disabled>Create Puzzles</button>
+            </div>
+
+            <div class="phase disabled" id="phase4">
+                <h3>Phase 4: Generate PDF</h3>
+                <p style="color: rgba(255, 255, 255, 0.8); margin-bottom: 1rem;">
+                    Create a PDF with all 100 puzzles and solutions.
                 </p>
                 <button class="btn" id="createPdfBtn" disabled>Create PDF</button>
                 <button class="btn btn-secondary" id="savePdfBtn" style="display: none;">Save PDF As...</button>
@@ -255,13 +264,13 @@
         <div class="main-content">
             <div class="header">
                 <h1>AI Word Search Generator</h1>
-                <p>Generate 55 professional word search puzzles automatically</p>
+                <p>Generate 100 themed word search puzzles for your niche category</p>
             </div>
             
             <div class="pdf-viewer">
                 <div id="emptyState" class="empty-state">
                     <h3>Ready to Generate</h3>
-                    <p>Click "Generate 55 Topics" to start creating your word search puzzle collection.</p>
+                    <p>Enter your category to start creating your 100-page word search puzzle collection.</p>
                 </div>
                 
                 <div id="pdfContainer" class="pdf-container">
@@ -283,50 +292,36 @@
         const { ipcRenderer, shell } = require('electron');
         
         let currentPdfPath = null;
-        let generatedTopics = [];
+        let selectedCategory = '';
+        let generatedSubthemes = [];
 
-        // Phase 1: Generate Topics
-        document.getElementById('generateTopicsBtn').addEventListener('click', async () => {
-            showProgress('Generating 55 topics with AI...');
-            disableButton('generateTopicsBtn');
-
-            try {
-                const result = await ipcRenderer.invoke('generate-topics');
-                
-                if (result.success) {
-                    generatedTopics = result.topics;
-                    showStatus(`✓ Generated ${result.topics.length} topics successfully!`);
-                    enablePhase2();
-                } else {
-                    showStatus(`✗ Failed to generate topics: ${result.error}`);
-                    enableButton('generateTopicsBtn');
-                }
-            } catch (error) {
-                showStatus(`✗ Error: ${error.message}`);
-                enableButton('generateTopicsBtn');
+        // Phase 1: Set Category
+        document.getElementById('setCategoryBtn').addEventListener('click', async () => {
+            const category = document.getElementById('categoryInput').value.trim();
+            if (!category) {
+                showStatus('Please enter a category');
+                return;
             }
-
-            hideProgress();
+            
+            selectedCategory = category;
+            showStatus(`✓ Category set: ${category}`);
+            enablePhase2();
         });
 
-        // Phase 2: Generate Puzzles
+        // Phase 2: Generate Sub-themes
         document.getElementById('generatePuzzlesBtn').addEventListener('click', async () => {
-            showProgress('Creating puzzles...');
+            showProgress('Generating 100 sub-themes with AI...');
             disableButton('generatePuzzlesBtn');
 
-            // Listen for progress updates
-            ipcRenderer.on('puzzle-progress', (event, data) => {
-                updateProgress(data.current, data.total, data.status);
-            });
-
             try {
-                const result = await ipcRenderer.invoke('generate-puzzles');
+                const result = await ipcRenderer.invoke('generate-subthemes', selectedCategory);
                 
                 if (result.success) {
-                    showStatus(`✓ Created ${result.successCount} puzzles (${result.skipCount} skipped)`);
+                    generatedSubthemes = result.subthemes;
+                    showStatus(`✓ Generated ${result.subthemes.length} sub-themes successfully!`);
                     enablePhase3();
                 } else {
-                    showStatus(`✗ Failed to generate puzzles: ${result.error}`);
+                    showStatus(`✗ Failed to generate sub-themes: ${result.error}`);
                     enableButton('generatePuzzlesBtn');
                 }
             } catch (error) {
@@ -334,12 +329,40 @@
                 enableButton('generatePuzzlesBtn');
             }
 
+            hideProgress();
+        });
+
+        // Phase 3: Create Puzzles
+        document.getElementById('createPuzzlesBtn').addEventListener('click', async () => {
+            showProgress('Creating puzzles...');
+            disableButton('createPuzzlesBtn');
+
+            // Listen for progress updates
+            ipcRenderer.on('puzzle-progress', (event, data) => {
+                updateProgress(data.current, data.total, data.status);
+            });
+
+            try {
+                const result = await ipcRenderer.invoke('create-puzzles', selectedCategory, generatedSubthemes);
+                
+                if (result.success) {
+                    showStatus(`✓ Created ${result.successCount} puzzles (${result.skipCount} skipped)`);
+                    enablePhase4();
+                } else {
+                    showStatus(`✗ Failed to generate puzzles: ${result.error}`);
+                    enableButton('createPuzzlesBtn');
+                }
+            } catch (error) {
+                showStatus(`✗ Error: ${error.message}`);
+                enableButton('createPuzzlesBtn');
+            }
+
             // Remove progress listener
             ipcRenderer.removeAllListeners('puzzle-progress');
             hideProgress();
         });
 
-        // Phase 3: Create PDF
+        // Phase 4: Create PDF
         document.getElementById('createPdfBtn').addEventListener('click', async () => {
             showProgress('Creating PDF...');
             disableButton('createPdfBtn');
@@ -425,6 +448,11 @@
 
         function enablePhase3() {
             document.getElementById('phase3').classList.remove('disabled');
+            enableButton('createPuzzlesBtn');
+        }
+
+        function enablePhase4() {
+            document.getElementById('phase4').classList.remove('disabled');
             enableButton('createPdfBtn');
         }
 

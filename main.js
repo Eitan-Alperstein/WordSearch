@@ -7,15 +7,18 @@ let ollama = require('ollama');
 if (ollama.default) ollama = ollama.default;
 
 let mainWindow;
-let generatedTopics = [];
+let selectedCategory = '';
+let generatedSubthemes = [];
 let generatedPuzzles = [];
 
-// PHASE 1: Generate topics using AI
-ipcMain.handle('generate-topics', async (event) => {
-    console.log('\n=== GENERATING 55 TOPICS ===');
+// PHASE 1: Generate sub-themes using AI
+ipcMain.handle('generate-subthemes', async (event, category) => {
+    console.log(`\n=== GENERATING 100 SUB-THEMES FOR: ${category} ===`);
     
     try {
-        const prompt = fs.readFileSync(path.join(__dirname, 'topic-prompt.txt'), 'utf8');
+        selectedCategory = category;
+        let prompt = fs.readFileSync(path.join(__dirname, 'subtheme-prompt.txt'), 'utf8');
+        prompt = prompt.replace('{CATEGORY}', category);
 
         const result = await ollama.generate({
             model: 'llama3.2',
@@ -24,27 +27,27 @@ ipcMain.handle('generate-topics', async (event) => {
             options: { temperature: 0.3 }
         });
 
-        const topicsText = result.response.trim();
-        const topics = topicsText.split(',').map(t => t.trim()).filter(t => t);
+        const subthemesText = result.response.trim();
+        const subthemes = subthemesText.split(',').map(t => t.trim()).filter(t => t);
         
-        console.log(`Generated ${topics.length} topics:`, topics.slice(0, 10), '...');
+        console.log(`Generated ${subthemes.length} sub-themes:`, subthemes.slice(0, 10), '...');
         
-        generatedTopics = topics.slice(0, 55); // Ensure exactly 55
+        generatedSubthemes = subthemes.slice(0, 100); // Ensure exactly 100
         
-        return { success: true, topics: generatedTopics };
+        return { success: true, subthemes: generatedSubthemes };
         
     } catch (error) {
-        console.error('Topic generation failed:', error.message);
+        console.error('Sub-theme generation failed:', error.message);
         return { success: false, error: error.message };
     }
 });
 
-// PHASE 2: Generate puzzles from topics
-ipcMain.handle('generate-puzzles', async (event) => {
-    console.log('\n=== GENERATING PUZZLES FROM TOPICS ===');
+// PHASE 2: Generate puzzles from sub-themes
+ipcMain.handle('create-puzzles', async (event, category, subthemes) => {
+    console.log('\n=== GENERATING PUZZLES FROM SUB-THEMES ===');
     
-    if (generatedTopics.length === 0) {
-        return { success: false, error: 'No topics available. Generate topics first.' };
+    if (!subthemes || subthemes.length === 0) {
+        return { success: false, error: 'No sub-themes available. Generate sub-themes first.' };
     }
     
     const promptTemplate = fs.readFileSync(path.join(__dirname, 'ollama-prompt.txt'), 'utf8');
@@ -52,26 +55,26 @@ ipcMain.handle('generate-puzzles', async (event) => {
     let successCount = 0;
     let skipCount = 0;
     
-    for (let i = 0; i < generatedTopics.length; i++) {
-        const topic = generatedTopics[i];
+    for (let i = 0; i < subthemes.length; i++) {
+        const subtheme = subthemes[i];
         const progress = i + 1;
         
-        console.log(`\n--- ${progress}/55: "${topic}" ---`);
+        console.log(`\n--- ${progress}/100: "${subtheme}" ---`);
         
         // Send progress update
         if (event.sender && !event.sender.isDestroyed()) {
             event.sender.send('puzzle-progress', {
                 current: progress,
-                total: 55,
-                topic: topic,
-                status: `Processing ${progress}/55: ${topic}`
+                total: 100,
+                topic: subtheme,
+                status: `Processing ${progress}/100: ${subtheme}`
             });
         }
         
         try {
-            // Generate words for this topic
+            // Generate words for this sub-theme
             const prompt = promptTemplate
-                .replace(/{{category}}/g, topic)
+                .replace(/{{category}}/g, `${category} - ${subtheme}`)
                 .replace(/{{wordsPerPuzzle}}/g, 20);
             
             const result = await ollama.generate({
@@ -95,7 +98,7 @@ ipcMain.handle('generate-puzzles', async (event) => {
             
             if (words.length >= 10) {
                 // Create puzzle
-                const puzzle = createPuzzle(words, topic);
+                const puzzle = createPuzzle(words, subtheme);
                 puzzles.push(puzzle);
                 successCount++;
                 console.log(`✓ SUCCESS: ${words.length} words`);
@@ -251,10 +254,8 @@ function addPuzzlePage(doc, puzzle, pageNumber) {
     const gridSize = 15;
     const cellSize = 25;
 
-    // Title
-    doc.fontSize(24).font('Helvetica-Bold')
-       .text(category, { align: 'center' });
-    doc.moveDown(1.5);
+    // No title - start directly with grid
+    doc.moveDown(2);
 
     // Grid
     const gridWidth = gridSize * cellSize;
@@ -297,9 +298,9 @@ function addSolutionPage(doc, puzzle, pageNumber) {
     const gridSize = 15;
     const cellSize = 25;
 
-    // Title
-    doc.fontSize(24).font('Helvetica-Bold')
-       .text(`${category} - Solution`, { align: 'center' });
+    // Solution title only
+    doc.fontSize(20).font('Helvetica-Bold')
+       .text('Solution', { align: 'center' });
     doc.moveDown(1.5);
 
     // Grid

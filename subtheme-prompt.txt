@@ -1,0 +1,21 @@
+Generate exactly 100 unique sub-themes for word search puzzles within the category: {CATEGORY}
+
+Each sub-theme should be a specific, focused topic that relates to the main category. The sub-themes should be diverse enough to create interesting word lists but specific enough that 10 related words can be easily found.
+
+Rules:
+- Each sub-theme should be 1-4 words maximum
+- Focus on specific aspects, locations, equipment, techniques, history, famous examples, etc. within the category
+- Make sub-themes specific enough that someone could easily think of 10 related words
+- Avoid overly broad or overly narrow sub-themes
+- Include a mix of beginner-friendly and more advanced sub-themes
+- No duplicate or very similar sub-themes
+
+Examples for "Tennis":
+- Wimbledon Tournament, Tennis Equipment, Court Surfaces, Famous Players, Tennis Techniques, Grand Slam Events, Tennis Scoring, Professional Tours, Tennis Clothing, Court Dimensions
+
+Examples for "Cooking":
+- Italian Cuisine, Baking Tools, Spices and Herbs, Knife Skills, French Techniques, Breakfast Foods, Grilling Methods, Kitchen Appliances, Pasta Types, Dessert Making
+
+Must output exactly 100 sub-themes separated by commas.
+
+Only output the comma-separated list of exactly 100 sub-themes, nothing else.
