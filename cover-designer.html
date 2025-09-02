@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cover Designer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .toolbar {
+            width: 300px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(25px);
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 1rem;
+            overflow-y: auto;
+        }
+
+        .canvas-area {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .canvas-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        #designCanvas {
+            border-radius: 8px;
+            cursor: crosshair;
+        }
+
+        .tool-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .tool-section h3 {
+            color: white;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn.active {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #333;
+        }
+
+        .input-group {
+            margin-bottom: 0.5rem;
+        }
+
+        .input-group label {
+            display: block;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.8rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 0.4rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.9);
+            font-size: 0.9rem;
+        }
+
+        .color-input {
+            width: 100%;
+            height: 40px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .action-buttons {
+            position: fixed;
+            bottom: 2rem;
+            left: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 1rem;
+            z-index: 1000;
+        }
+
+        .action-buttons .btn {
+            flex: 1;
+            padding: 1rem;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #333;
+        }
+
+        .layers-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .layer-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.5rem;
+            margin-bottom: 0.3rem;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .layer-item.selected {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .layer-item span {
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        .layer-delete {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+
+        #imageInput {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="toolbar">
+            <h2 style="color: white; margin-bottom: 1rem;">Cover Designer</h2>
+            
+            <div class="tool-section">
+                <h3>Tools</h3>
+                <button class="btn" id="textTool">Add Text</button>
+                <button class="btn" id="rectangleTool">Add Rectangle</button>
+                <button class="btn" id="circleTool">Add Circle</button>
+                <button class="btn" id="imageTool">Add Image</button>
+                <input type="file" id="imageInput" accept="image/*">
+            </div>
+
+            <div class="tool-section">
+                <h3>Properties</h3>
+                <div class="input-group">
+                    <label>Text Content</label>
+                    <input type="text" id="textContent" placeholder="Enter text...">
+                </div>
+                <div class="input-group">
+                    <label>Font Size</label>
+                    <input type="number" id="fontSize" value="24" min="8" max="200">
+                </div>
+                <div class="input-group">
+                    <label>Font Family</label>
+                    <select id="fontFamily">
+                        <option value="Arial">Arial</option>
+                        <option value="Helvetica">Helvetica</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Verdana">Verdana</option>
+                        <option value="Impact">Impact</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Fill Color</label>
+                    <input type="color" id="fillColor" class="color-input" value="#000000">
+                </div>
+                <div class="input-group">
+                    <label>Stroke Color</label>
+                    <input type="color" id="strokeColor" class="color-input" value="#000000">
+                </div>
+                <div class="input-group">
+                    <label>Stroke Width</label>
+                    <input type="number" id="strokeWidth" value="0" min="0" max="20">
+                </div>
+                <div class="input-group">
+                    <label>Corner Radius</label>
+                    <input type="number" id="cornerRadius" value="0" min="0" max="50">
+                </div>
+            </div>
+
+            <div class="tool-section">
+                <h3>Layers</h3>
+                <div class="layers-list" id="layersList"></div>
+            </div>
+        </div>
+
+        <div class="canvas-area">
+            <div class="canvas-container">
+                <canvas id="designCanvas" width="600" height="800"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-buttons">
+        <button class="btn btn-secondary" id="backBtn">Back to Puzzles</button>
+        <button class="btn btn-success" id="finishBtn">Add Cover & Finish PDF</button>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        
+        const canvas = document.getElementById('designCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let elements = [];
+        let selectedElement = null;
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+        let currentTool = null;
+
+        // Initialize canvas
+        function initCanvas() {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            redraw();
+        }
+
+        // Element class
+        class DesignElement {
+            constructor(type, x, y, properties = {}) {
+                this.type = type;
+                this.x = x;
+                this.y = y;
+                this.width = properties.width || 100;
+                this.height = properties.height || 50;
+                this.fillColor = properties.fillColor || '#000000';
+                this.strokeColor = properties.strokeColor || '#000000';
+                this.strokeWidth = properties.strokeWidth || 0;
+                this.cornerRadius = properties.cornerRadius || 0;
+                this.text = properties.text || 'Sample Text';
+                this.fontSize = properties.fontSize || 24;
+                this.fontFamily = properties.fontFamily || 'Arial';
+                this.image = properties.image || null;
+                this.id = Date.now() + Math.random();
+            }
+
+            draw(ctx) {
+                ctx.save();
+                
+                if (this.type === 'text') {
+                    ctx.font = `${this.fontSize}px ${this.fontFamily}`;
+                    ctx.fillStyle = this.fillColor;
+                    if (this.strokeWidth > 0) {
+                        ctx.strokeStyle = this.strokeColor;
+                        ctx.lineWidth = this.strokeWidth;
+                        ctx.strokeText(this.text, this.x, this.y);
+                    }
+                    ctx.fillText(this.text, this.x, this.y);
+                } else if (this.type === 'rectangle') {
+                    if (this.cornerRadius > 0) {
+                        this.drawRoundedRect(ctx, this.x, this.y, this.width, this.height, this.cornerRadius);
+                    } else {
+                        ctx.rect(this.x, this.y, this.width, this.height);
+                    }
+                    
+                    ctx.fillStyle = this.fillColor;
+                    ctx.fill();
+                    
+                    if (this.strokeWidth > 0) {
+                        ctx.strokeStyle = this.strokeColor;
+                        ctx.lineWidth = this.strokeWidth;
+                        ctx.stroke();
+                    }
+                } else if (this.type === 'circle') {
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.width/2, this.y + this.height/2, Math.min(this.width, this.height)/2, 0, 2 * Math.PI);
+                    ctx.fillStyle = this.fillColor;
+                    ctx.fill();
+                    
+                    if (this.strokeWidth > 0) {
+                        ctx.strokeStyle = this.strokeColor;
+                        ctx.lineWidth = this.strokeWidth;
+                        ctx.stroke();
+                    }
+                } else if (this.type === 'image' && this.image) {
+                    ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+                }
+                
+                // Draw selection outline
+                if (selectedElement === this) {
+                    ctx.strokeStyle = '#007bff';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.strokeRect(this.x - 2, this.y - 2, this.width + 4, this.height + 4);
+                    ctx.setLineDash([]);
+                }
+                
+                ctx.restore();
+            }
+
+            drawRoundedRect(ctx, x, y, width, height, radius) {
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + width - radius, y);
+                ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                ctx.lineTo(x + width, y + height - radius);
+                ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                ctx.lineTo(x + radius, y + height);
+                ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+            }
+
+            contains(x, y) {
+                if (this.type === 'text') {
+                    ctx.font = `${this.fontSize}px ${this.fontFamily}`;
+                    const metrics = ctx.measureText(this.text);
+                    return x >= this.x && x <= this.x + metrics.width && 
+                           y >= this.y - this.fontSize && y <= this.y;
+                }
+                return x >= this.x && x <= this.x + this.width && 
+                       y >= this.y && y <= this.y + this.height;
+            }
+        }
+
+        // Tool handlers
+        document.getElementById('textTool').addEventListener('click', () => {
+            currentTool = 'text';
+            updateToolButtons();
+        });
+
+        document.getElementById('rectangleTool').addEventListener('click', () => {
+            currentTool = 'rectangle';
+            updateToolButtons();
+        });
+
+        document.getElementById('circleTool').addEventListener('click', () => {
+            currentTool = 'circle';
+            updateToolButtons();
+        });
+
+        document.getElementById('imageTool').addEventListener('click', () => {
+            document.getElementById('imageInput').click();
+        });
+
+        document.getElementById('imageInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const element = new DesignElement('image', 50, 50, {
+                            width: Math.min(200, img.width),
+                            height: Math.min(200, img.height),
+                            image: img
+                        });
+                        elements.push(element);
+                        selectedElement = element;
+                        redraw();
+                        updateLayers();
+                        updateProperties();
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function updateToolButtons() {
+            document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
+            if (currentTool) {
+                document.getElementById(currentTool + 'Tool').classList.add('active');
+            }
+        }
+
+        // Canvas event handlers
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Check if clicking on existing element
+            selectedElement = null;
+            for (let i = elements.length - 1; i >= 0; i--) {
+                if (elements[i].contains(x, y)) {
+                    selectedElement = elements[i];
+                    isDragging = true;
+                    dragOffset.x = x - selectedElement.x;
+                    dragOffset.y = y - selectedElement.y;
+                    break;
+                }
+            }
+
+            // Create new element if tool is selected and not clicking on existing element
+            if (!selectedElement && currentTool) {
+                const properties = {
+                    fillColor: document.getElementById('fillColor').value,
+                    strokeColor: document.getElementById('strokeColor').value,
+                    strokeWidth: parseInt(document.getElementById('strokeWidth').value),
+                    cornerRadius: parseInt(document.getElementById('cornerRadius').value),
+                    text: document.getElementById('textContent').value || 'Sample Text',
+                    fontSize: parseInt(document.getElementById('fontSize').value),
+                    fontFamily: document.getElementById('fontFamily').value
+                };
+
+                const element = new DesignElement(currentTool, x, y, properties);
+                elements.push(element);
+                selectedElement = element;
+                currentTool = null;
+                updateToolButtons();
+            }
+
+            redraw();
+            updateLayers();
+            updateProperties();
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging && selectedElement) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                selectedElement.x = x - dragOffset.x;
+                selectedElement.y = y - dragOffset.y;
+                redraw();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Property change handlers
+        document.getElementById('textContent').addEventListener('input', updateSelectedElement);
+        document.getElementById('fontSize').addEventListener('input', updateSelectedElement);
+        document.getElementById('fontFamily').addEventListener('change', updateSelectedElement);
+        document.getElementById('fillColor').addEventListener('input', updateSelectedElement);
+        document.getElementById('strokeColor').addEventListener('input', updateSelectedElement);
+        document.getElementById('strokeWidth').addEventListener('input', updateSelectedElement);
+        document.getElementById('cornerRadius').addEventListener('input', updateSelectedElement);
+
+        function updateSelectedElement() {
+            if (!selectedElement) return;
+            
+            selectedElement.text = document.getElementById('textContent').value;
+            selectedElement.fontSize = parseInt(document.getElementById('fontSize').value);
+            selectedElement.fontFamily = document.getElementById('fontFamily').value;
+            selectedElement.fillColor = document.getElementById('fillColor').value;
+            selectedElement.strokeColor = document.getElementById('strokeColor').value;
+            selectedElement.strokeWidth = parseInt(document.getElementById('strokeWidth').value);
+            selectedElement.cornerRadius = parseInt(document.getElementById('cornerRadius').value);
+            
+            redraw();
+        }
+
+        function updateProperties() {
+            if (selectedElement) {
+                document.getElementById('textContent').value = selectedElement.text || '';
+                document.getElementById('fontSize').value = selectedElement.fontSize || 24;
+                document.getElementById('fontFamily').value = selectedElement.fontFamily || 'Arial';
+                document.getElementById('fillColor').value = selectedElement.fillColor || '#000000';
+                document.getElementById('strokeColor').value = selectedElement.strokeColor || '#000000';
+                document.getElementById('strokeWidth').value = selectedElement.strokeWidth || 0;
+                document.getElementById('cornerRadius').value = selectedElement.cornerRadius || 0;
+            }
+        }
+
+        function redraw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            elements.forEach(element => element.draw(ctx));
+        }
+
+        function updateLayers() {
+            const layersList = document.getElementById('layersList');
+            layersList.innerHTML = '';
+            
+            elements.forEach((element, index) => {
+                const layerItem = document.createElement('div');
+                layerItem.className = 'layer-item';
+                if (element === selectedElement) {
+                    layerItem.classList.add('selected');
+                }
+                
+                layerItem.innerHTML = `
+                    <span>${element.type} ${index + 1}</span>
+                    <button class="layer-delete" onclick="deleteElement(${element.id})">×</button>
+                `;
+                
+                layerItem.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('layer-delete')) return;
+                    selectedElement = element;
+                    redraw();
+                    updateLayers();
+                    updateProperties();
+                });
+                
+                layersList.appendChild(layerItem);
+            });
+        }
+
+        function deleteElement(id) {
+            elements = elements.filter(el => el.id !== id);
+            if (selectedElement && selectedElement.id === id) {
+                selectedElement = null;
+            }
+            redraw();
+            updateLayers();
+            updateProperties();
+        }
+
+        // Action buttons
+        document.getElementById('backBtn').addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+
+        document.getElementById('finishBtn').addEventListener('click', async () => {
+            // Convert canvas to image data
+            const imageData = canvas.toDataURL('image/png');
+            
+            try {
+                const result = await ipcRenderer.invoke('add-cover-to-pdf', imageData);
+                if (result.success) {
+                    alert('Cover added successfully! PDF is complete.');
+                    window.location.href = 'index.html';
+                } else {
+                    alert('Error adding cover: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+
+        // Initialize
+        initCanvas();
+        updateLayers();
+
+        // Make deleteElement global
+        window.deleteElement = deleteElement;
+    </script>
+</body>
+</html>
