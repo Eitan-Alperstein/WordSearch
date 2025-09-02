@@ -264,7 +264,7 @@
         <div class="main-content">
             <div class="header">
                 <h1>AI Word Search Generator</h1>
-                <p>Generate 100 themed word search puzzles for your niche category</p>
+                <p id="modeIndicator">Generate 100 themed word search puzzles for your niche category</p>
             </div>
             
             <div class="pdf-viewer">
@@ -294,6 +294,13 @@
         let currentPdfPath = null;
         let selectedCategory = '';
         let generatedSubthemes = [];
+        let testMode = false;
+        
+        // Check test mode on load
+        ipcRenderer.invoke('check-test-mode').then(isTestMode => {
+            testMode = isTestMode;
+            updateModeIndicator();
+        });
 
         // Phase 1: Set Category
         document.getElementById('setCategoryBtn').addEventListener('click', async () => {
@@ -467,6 +474,22 @@
                 fileUrl = 'file://' + resolved.replace(/\\/g, '/');
             }
             document.getElementById('pdfEmbed').src = fileUrl;
+        }
+        
+        function updateModeIndicator() {
+            const indicator = document.getElementById('modeIndicator');
+            if (testMode) {
+                indicator.innerHTML = '🧪 <strong style="color: #ff6b6b;">TEST MODE</strong> - Generate 5 themed puzzles for testing';
+                indicator.style.background = 'rgba(255, 107, 107, 0.2)';
+                indicator.style.padding = '0.5rem';
+                indicator.style.borderRadius = '6px';
+                indicator.style.border = '2px solid rgba(255, 107, 107, 0.5)';
+            } else {
+                indicator.textContent = 'Generate 100 themed word search puzzles for your niche category';
+                indicator.style.background = 'none';
+                indicator.style.padding = '0';
+                indicator.style.border = 'none';
+            }
         }
     </script>
 </body>

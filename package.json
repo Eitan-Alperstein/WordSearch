@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "test": "electron . --test",
     "build": "electron-builder",
     "dev": "electron . --dev"
   },

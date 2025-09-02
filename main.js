@@ -10,15 +10,17 @@ let mainWindow;
 let selectedCategory = '';
 let generatedSubthemes = [];
 let generatedPuzzles = [];
+let testMode = process.argv.includes('--test');
 
 // PHASE 1: Generate sub-themes using AI
 ipcMain.handle('generate-subthemes', async (event, category) => {
-    console.log(`\n=== GENERATING 100 SUB-THEMES FOR: ${category} ===`);
+    const targetCount = testMode ? 5 : 100;
+    console.log(`\n=== GENERATING ${targetCount} SUB-THEMES FOR: ${category} ${testMode ? '(TEST MODE)' : ''} ===`);
     
     try {
         selectedCategory = category;
         let prompt = fs.readFileSync(path.join(__dirname, 'subtheme-prompt.txt'), 'utf8');
-        prompt = prompt.replace('{CATEGORY}', category);
+        prompt = prompt.replace('{CATEGORY}', category).replace('100', targetCount.toString());
 
         const result = await ollama.generate({
             model: 'llama3.2',
@@ -32,7 +34,7 @@ ipcMain.handle('generate-subthemes', async (event, category) => {
         
         console.log(`Generated ${subthemes.length} sub-themes:`, subthemes.slice(0, 10), '...');
         
-        generatedSubthemes = subthemes.slice(0, 100); // Ensure exactly 100
+        generatedSubthemes = subthemes.slice(0, targetCount);
         
         return { success: true, subthemes: generatedSubthemes };
         
@@ -44,7 +46,8 @@ ipcMain.handle('generate-subthemes', async (event, category) => {
 
 // PHASE 2: Generate puzzles from sub-themes
 ipcMain.handle('create-puzzles', async (event, category, subthemes) => {
-    console.log('\n=== GENERATING PUZZLES FROM SUB-THEMES ===');
+    const targetCount = testMode ? 5 : 100;
+    console.log(`\n=== GENERATING PUZZLES FROM SUB-THEMES ${testMode ? '(TEST MODE)' : ''} ===`);
     
     if (!subthemes || subthemes.length === 0) {
         return { success: false, error: 'No sub-themes available. Generate sub-themes first.' };
@@ -59,15 +62,15 @@ ipcMain.handle('create-puzzles', async (event, category, subthemes) => {
         const subtheme = subthemes[i];
         const progress = i + 1;
         
-        console.log(`\n--- ${progress}/100: "${subtheme}" ---`);
+        console.log(`\n--- ${progress}/${targetCount}: "${subtheme}" ---`);
         
         // Send progress update
         if (event.sender && !event.sender.isDestroyed()) {
             event.sender.send('puzzle-progress', {
                 current: progress,
-                total: 100,
+                total: targetCount,
                 topic: subtheme,
-                status: `Processing ${progress}/100: ${subtheme}`
+                status: `Processing ${progress}/${targetCount}: ${subtheme}`
             });
         }
         
@@ -114,7 +117,7 @@ ipcMain.handle('create-puzzles', async (event, category, subthemes) => {
     }
     
     generatedPuzzles = puzzles;
-    console.log(`\n=== COMPLETED: ${successCount} puzzles, ${skipCount} skipped ===`);
+    console.log(`\n=== COMPLETED: ${successCount} puzzles, ${skipCount} skipped ${testMode ? '(TEST MODE)' : ''} ===`);
     
     return { success: true, puzzles: puzzles, successCount, skipCount };
 });
@@ -412,4 +415,12 @@ app.on('activate', () => {
     }
 });
 
-console.log('Word Search Generator Ready!');
+// Check test mode handler
+ipcMain.handle('check-test-mode', () => {
+    return testMode;
+});
+
+console.log(`Word Search Generator Ready! ${testMode ? '*** TEST MODE ACTIVE ***' : ''}`);
+if (testMode) {
+    console.log('*** TEST MODE: Will generate only 5 puzzles instead of 100 ***');
+}
