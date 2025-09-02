@@ -3,592 +3,615 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cover Designer</title>
+    <title>Advanced Cover Designer</title>
+    <script src="node_modules/konva/konva.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #1a1a1a;
+            color: white;
             height: 100vh;
             overflow: hidden;
         }
-
-        .container {
-            display: flex;
-            height: 100vh;
-        }
-
+        
+        .editor-container { display: flex; height: 100vh; }
+        
         .toolbar {
-            width: 300px;
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(25px);
-            border-right: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 1rem;
-            overflow-y: auto;
+            width: 280px;
+            background: #2d2d2d;
+            border-right: 1px solid #444;
+            display: flex;
+            flex-direction: column;
         }
-
+        
         .canvas-area {
             flex: 1;
+            background: #1a1a1a;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 2rem;
-        }
-
-        .canvas-container {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
             position: relative;
         }
-
-        #designCanvas {
+        
+        .canvas-wrapper {
+            background: white;
             border-radius: 8px;
-            cursor: crosshair;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-
-        .tool-section {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1rem;
+        
+        .tool-group {
+            padding: 15px;
+            border-bottom: 1px solid #444;
         }
-
-        .tool-section h3 {
-            color: white;
-            margin-bottom: 0.5rem;
-            font-size: 1rem;
+        
+        .tool-group h3 {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #999;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
         }
-
-        .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+        
+        .tool-btn {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #3a3a3a;
             border: none;
-            padding: 0.5rem 1rem;
             border-radius: 6px;
-            font-size: 0.9rem;
+            color: white;
             cursor: pointer;
-            width: 100%;
-            margin-bottom: 0.5rem;
-            transition: all 0.3s ease;
+            font-size: 13px;
+            transition: all 0.2s;
         }
-
-        .btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        
+        .tool-btn:hover { background: #4a4a4a; }
+        .tool-btn.active { background: #007acc; }
+        
+        .property-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
         }
-
-        .btn.active {
-            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-            color: #333;
+        
+        .property-label {
+            font-size: 11px;
+            color: #ccc;
+            width: 80px;
+            text-transform: uppercase;
         }
-
-        .input-group {
-            margin-bottom: 0.5rem;
-        }
-
-        .input-group label {
-            display: block;
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 0.8rem;
-            margin-bottom: 0.2rem;
-        }
-
-        .input-group input, .input-group select {
-            width: 100%;
-            padding: 0.4rem;
-            border: 1px solid rgba(255, 255, 255, 0.3);
+        
+        .property-input {
+            flex: 1;
+            padding: 6px 8px;
+            background: #3a3a3a;
+            border: 1px solid #555;
             border-radius: 4px;
-            background: rgba(255, 255, 255, 0.9);
-            font-size: 0.9rem;
+            color: white;
+            font-size: 12px;
         }
-
+        
         .color-input {
-            width: 100%;
-            height: 40px;
+            width: 40px;
+            height: 30px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
         }
-
-        .action-buttons {
-            position: fixed;
-            bottom: 2rem;
-            left: 1rem;
-            right: 1rem;
-            display: flex;
-            gap: 1rem;
-            z-index: 1000;
-        }
-
-        .action-buttons .btn {
+        
+        .range-input {
             flex: 1;
-            padding: 1rem;
-            font-size: 1rem;
-            font-weight: 600;
+            margin: 0 8px;
         }
-
-        .btn-success {
-            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
-        }
-
-        .btn-secondary {
-            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-            color: #333;
-        }
-
-        .layers-list {
-            max-height: 200px;
+        
+        .layers-panel {
+            flex: 1;
             overflow-y: auto;
         }
-
+        
         .layer-item {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 0.5rem;
-            margin-bottom: 0.3rem;
-            border-radius: 4px;
+            padding: 8px 15px;
+            border-bottom: 1px solid #333;
             cursor: pointer;
+            font-size: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-
-        .layer-item.selected {
-            background: rgba(255, 255, 255, 0.3);
+        
+        .layer-item:hover { background: #333; }
+        .layer-item.selected { background: #007acc; }
+        
+        .layer-controls {
+            display: flex;
+            gap: 5px;
         }
-
-        .layer-item span {
-            color: white;
-            font-size: 0.8rem;
-        }
-
-        .layer-delete {
-            background: #ff4757;
-            color: white;
+        
+        .layer-btn {
+            width: 20px;
+            height: 20px;
+            background: #555;
             border: none;
-            padding: 0.2rem 0.4rem;
             border-radius: 3px;
+            color: white;
             cursor: pointer;
-            font-size: 0.7rem;
+            font-size: 10px;
         }
-
-        #imageInput {
-            display: none;
+        
+        .finish-btn {
+            margin: 15px;
+            padding: 15px;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
         }
+        
+        .finish-btn:hover { transform: translateY(-1px); }
+        
+        #imageUpload { display: none; }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="editor-container">
         <div class="toolbar">
-            <h2 style="color: white; margin-bottom: 1rem;">Cover Designer</h2>
-            
-            <div class="tool-section">
+            <div class="tool-group">
                 <h3>Tools</h3>
-                <button class="btn" id="textTool">Add Text</button>
-                <button class="btn" id="rectangleTool">Add Rectangle</button>
-                <button class="btn" id="circleTool">Add Circle</button>
-                <button class="btn" id="imageTool">Add Image</button>
-                <input type="file" id="imageInput" accept="image/*">
+                <button class="tool-btn" onclick="addRectangle()">Rectangle</button>
+                <button class="tool-btn" onclick="addCircle()">Circle</button>
+                <button class="tool-btn" onclick="addText()">Text</button>
+                <button class="tool-btn" onclick="addLine()">Line</button>
+                <button class="tool-btn" onclick="document.getElementById('imageUpload').click()">Image</button>
+                <input type="file" id="imageUpload" accept="image/*">
             </div>
-
-            <div class="tool-section">
+            
+            <div class="tool-group">
                 <h3>Properties</h3>
-                <div class="input-group">
-                    <label>Text Content</label>
-                    <input type="text" id="textContent" placeholder="Enter text...">
+                <div class="property-row">
+                    <span class="property-label">Fill</span>
+                    <input type="color" id="fillColor" class="color-input" value="#3498db">
                 </div>
-                <div class="input-group">
-                    <label>Font Size</label>
-                    <input type="number" id="fontSize" value="24" min="8" max="200">
+                <div class="property-row">
+                    <span class="property-label">Stroke</span>
+                    <input type="color" id="strokeColor" class="color-input" value="#2c3e50">
                 </div>
-                <div class="input-group">
-                    <label>Font Family</label>
-                    <select id="fontFamily">
-                        <option value="Arial">Arial</option>
-                        <option value="Helvetica">Helvetica</option>
-                        <option value="Times New Roman">Times New Roman</option>
-                        <option value="Georgia">Georgia</option>
-                        <option value="Verdana">Verdana</option>
-                        <option value="Impact">Impact</option>
+                <div class="property-row">
+                    <span class="property-label">Width</span>
+                    <input type="range" id="strokeWidth" class="range-input" min="0" max="20" value="2">
+                    <span id="strokeWidthValue">2</span>
+                </div>
+                <div class="property-row">
+                    <span class="property-label">Opacity</span>
+                    <input type="range" id="opacity" class="range-input" min="0" max="100" value="100">
+                    <span id="opacityValue">100</span>
+                </div>
+                <div class="property-row">
+                    <span class="property-label">Radius</span>
+                    <input type="range" id="cornerRadius" class="range-input" min="0" max="50" value="0">
+                    <span id="cornerRadiusValue">0</span>
+                </div>
+            </div>
+            
+            <div class="tool-group">
+                <h3>Text</h3>
+                <input type="text" id="textContent" class="property-input" placeholder="Enter text..." value="Sample Text">
+                <select id="fontFamily" class="property-input" style="margin-top: 8px;">
+                    <option value="Arial">Arial</option>
+                    <option value="Helvetica">Helvetica</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Verdana">Verdana</option>
+                    <option value="Impact">Impact</option>
+                </select>
+                <div class="property-row" style="margin-top: 8px;">
+                    <span class="property-label">Size</span>
+                    <input type="range" id="fontSize" class="range-input" min="12" max="120" value="24">
+                    <span id="fontSizeValue">24</span>
+                </div>
+                <div class="property-row">
+                    <span class="property-label">Weight</span>
+                    <select id="fontWeight" class="property-input">
+                        <option value="normal">Normal</option>
+                        <option value="bold">Bold</option>
                     </select>
                 </div>
-                <div class="input-group">
-                    <label>Fill Color</label>
-                    <input type="color" id="fillColor" class="color-input" value="#000000">
-                </div>
-                <div class="input-group">
-                    <label>Stroke Color</label>
-                    <input type="color" id="strokeColor" class="color-input" value="#000000">
-                </div>
-                <div class="input-group">
-                    <label>Stroke Width</label>
-                    <input type="number" id="strokeWidth" value="0" min="0" max="20">
-                </div>
-                <div class="input-group">
-                    <label>Corner Radius</label>
-                    <input type="number" id="cornerRadius" value="0" min="0" max="50">
+            </div>
+            
+            <div class="tool-group">
+                <h3>Actions</h3>
+                <button class="tool-btn" onclick="duplicateSelected()">Duplicate</button>
+                <button class="tool-btn" onclick="deleteSelected()">Delete</button>
+                <button class="tool-btn" onclick="bringToFront()">Bring Front</button>
+                <button class="tool-btn" onclick="sendToBack()">Send Back</button>
+                <button class="tool-btn" onclick="clearCanvas()">Clear All</button>
+            </div>
+            
+            <div class="layers-panel">
+                <div class="tool-group">
+                    <h3>Layers</h3>
+                    <div id="layersList"></div>
                 </div>
             </div>
-
-            <div class="tool-section">
-                <h3>Layers</h3>
-                <div class="layers-list" id="layersList"></div>
-            </div>
+            
+            <button class="finish-btn" onclick="finishCover()">Finish Cover Design</button>
         </div>
-
+        
         <div class="canvas-area">
-            <div class="canvas-container">
-                <canvas id="designCanvas" width="600" height="800"></canvas>
+            <div class="canvas-wrapper">
+                <div id="container"></div>
             </div>
         </div>
     </div>
-
-    <div class="action-buttons">
-        <button class="btn btn-secondary" id="backBtn">Back to Puzzles</button>
-        <button class="btn btn-success" id="finishBtn">Add Cover & Finish PDF</button>
-    </div>
-
+    
     <script>
         const { ipcRenderer } = require('electron');
         
-        const canvas = document.getElementById('designCanvas');
-        const ctx = canvas.getContext('2d');
+        // Initialize Konva stage
+        const stage = new Konva.Stage({
+            container: 'container',
+            width: 595,
+            height: 842
+        });
         
-        let elements = [];
-        let selectedElement = null;
-        let isDragging = false;
-        let dragOffset = { x: 0, y: 0 };
-        let currentTool = null;
-
-        // Initialize canvas
-        function initCanvas() {
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            redraw();
-        }
-
-        // Element class
-        class DesignElement {
-            constructor(type, x, y, properties = {}) {
-                this.type = type;
-                this.x = x;
-                this.y = y;
-                this.width = properties.width || 100;
-                this.height = properties.height || 50;
-                this.fillColor = properties.fillColor || '#000000';
-                this.strokeColor = properties.strokeColor || '#000000';
-                this.strokeWidth = properties.strokeWidth || 0;
-                this.cornerRadius = properties.cornerRadius || 0;
-                this.text = properties.text || 'Sample Text';
-                this.fontSize = properties.fontSize || 24;
-                this.fontFamily = properties.fontFamily || 'Arial';
-                this.image = properties.image || null;
-                this.id = Date.now() + Math.random();
-            }
-
-            draw(ctx) {
-                ctx.save();
-                
-                if (this.type === 'text') {
-                    ctx.font = `${this.fontSize}px ${this.fontFamily}`;
-                    ctx.fillStyle = this.fillColor;
-                    if (this.strokeWidth > 0) {
-                        ctx.strokeStyle = this.strokeColor;
-                        ctx.lineWidth = this.strokeWidth;
-                        ctx.strokeText(this.text, this.x, this.y);
-                    }
-                    ctx.fillText(this.text, this.x, this.y);
-                } else if (this.type === 'rectangle') {
-                    if (this.cornerRadius > 0) {
-                        this.drawRoundedRect(ctx, this.x, this.y, this.width, this.height, this.cornerRadius);
-                    } else {
-                        ctx.rect(this.x, this.y, this.width, this.height);
-                    }
-                    
-                    ctx.fillStyle = this.fillColor;
-                    ctx.fill();
-                    
-                    if (this.strokeWidth > 0) {
-                        ctx.strokeStyle = this.strokeColor;
-                        ctx.lineWidth = this.strokeWidth;
-                        ctx.stroke();
-                    }
-                } else if (this.type === 'circle') {
-                    ctx.beginPath();
-                    ctx.arc(this.x + this.width/2, this.y + this.height/2, Math.min(this.width, this.height)/2, 0, 2 * Math.PI);
-                    ctx.fillStyle = this.fillColor;
-                    ctx.fill();
-                    
-                    if (this.strokeWidth > 0) {
-                        ctx.strokeStyle = this.strokeColor;
-                        ctx.lineWidth = this.strokeWidth;
-                        ctx.stroke();
-                    }
-                } else if (this.type === 'image' && this.image) {
-                    ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
-                }
-                
-                // Draw selection outline
-                if (selectedElement === this) {
-                    ctx.strokeStyle = '#007bff';
-                    ctx.lineWidth = 2;
-                    ctx.setLineDash([5, 5]);
-                    ctx.strokeRect(this.x - 2, this.y - 2, this.width + 4, this.height + 4);
-                    ctx.setLineDash([]);
-                }
-                
-                ctx.restore();
-            }
-
-            drawRoundedRect(ctx, x, y, width, height, radius) {
-                ctx.beginPath();
-                ctx.moveTo(x + radius, y);
-                ctx.lineTo(x + width - radius, y);
-                ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-                ctx.lineTo(x + width, y + height - radius);
-                ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-                ctx.lineTo(x + radius, y + height);
-                ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-                ctx.lineTo(x, y + radius);
-                ctx.quadraticCurveTo(x, y, x + radius, y);
-                ctx.closePath();
-            }
-
-            contains(x, y) {
-                if (this.type === 'text') {
-                    ctx.font = `${this.fontSize}px ${this.fontFamily}`;
-                    const metrics = ctx.measureText(this.text);
-                    return x >= this.x && x <= this.x + metrics.width && 
-                           y >= this.y - this.fontSize && y <= this.y;
-                }
-                return x >= this.x && x <= this.x + this.width && 
-                       y >= this.y && y <= this.y + this.height;
-            }
-        }
-
-        // Tool handlers
-        document.getElementById('textTool').addEventListener('click', () => {
-            currentTool = 'text';
-            updateToolButtons();
+        const layer = new Konva.Layer();
+        stage.add(layer);
+        
+        // Add white background
+        const background = new Konva.Rect({
+            x: 0,
+            y: 0,
+            width: 595,
+            height: 842,
+            fill: 'white'
         });
-
-        document.getElementById('rectangleTool').addEventListener('click', () => {
-            currentTool = 'rectangle';
-            updateToolButtons();
+        layer.add(background);
+        
+        let selectedShape = null;
+        let transformer = new Konva.Transformer({
+            rotateAnchorOffset: 30,
+            borderStroke: '#007acc',
+            borderStrokeWidth: 2,
+            anchorStroke: '#007acc',
+            anchorFill: 'white',
+            anchorSize: 8
         });
-
-        document.getElementById('circleTool').addEventListener('click', () => {
-            currentTool = 'circle';
-            updateToolButtons();
-        });
-
-        document.getElementById('imageTool').addEventListener('click', () => {
-            document.getElementById('imageInput').click();
-        });
-
-        document.getElementById('imageInput').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const element = new DesignElement('image', 50, 50, {
-                            width: Math.min(200, img.width),
-                            height: Math.min(200, img.height),
-                            image: img
-                        });
-                        elements.push(element);
-                        selectedElement = element;
-                        redraw();
-                        updateLayers();
-                        updateProperties();
-                    };
-                    img.src = event.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        function updateToolButtons() {
-            document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
-            if (currentTool) {
-                document.getElementById(currentTool + 'Tool').classList.add('active');
-            }
-        }
-
-        // Canvas event handlers
-        canvas.addEventListener('mousedown', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            // Check if clicking on existing element
-            selectedElement = null;
-            for (let i = elements.length - 1; i >= 0; i--) {
-                if (elements[i].contains(x, y)) {
-                    selectedElement = elements[i];
-                    isDragging = true;
-                    dragOffset.x = x - selectedElement.x;
-                    dragOffset.y = y - selectedElement.y;
-                    break;
-                }
-            }
-
-            // Create new element if tool is selected and not clicking on existing element
-            if (!selectedElement && currentTool) {
-                const properties = {
-                    fillColor: document.getElementById('fillColor').value,
-                    strokeColor: document.getElementById('strokeColor').value,
-                    strokeWidth: parseInt(document.getElementById('strokeWidth').value),
-                    cornerRadius: parseInt(document.getElementById('cornerRadius').value),
-                    text: document.getElementById('textContent').value || 'Sample Text',
-                    fontSize: parseInt(document.getElementById('fontSize').value),
-                    fontFamily: document.getElementById('fontFamily').value
-                };
-
-                const element = new DesignElement(currentTool, x, y, properties);
-                elements.push(element);
-                selectedElement = element;
-                currentTool = null;
-                updateToolButtons();
-            }
-
-            redraw();
+        layer.add(transformer);
+        
+        // Add Rectangle
+        function addRectangle() {
+            const rect = new Konva.Rect({
+                x: 100,
+                y: 100,
+                width: 150,
+                height: 100,
+                fill: document.getElementById('fillColor').value,
+                stroke: document.getElementById('strokeColor').value,
+                strokeWidth: parseInt(document.getElementById('strokeWidth').value),
+                opacity: parseInt(document.getElementById('opacity').value) / 100,
+                cornerRadius: parseInt(document.getElementById('cornerRadius').value),
+                draggable: true,
+                name: 'shape'
+            });
+            
+            setupShapeEvents(rect);
+            layer.add(rect);
+            selectShape(rect);
             updateLayers();
-            updateProperties();
+        }
+        
+        // Add Circle
+        function addCircle() {
+            const circle = new Konva.Circle({
+                x: 200,
+                y: 200,
+                radius: 60,
+                fill: document.getElementById('fillColor').value,
+                stroke: document.getElementById('strokeColor').value,
+                strokeWidth: parseInt(document.getElementById('strokeWidth').value),
+                opacity: parseInt(document.getElementById('opacity').value) / 100,
+                draggable: true,
+                name: 'shape'
+            });
+            
+            setupShapeEvents(circle);
+            layer.add(circle);
+            selectShape(circle);
+            updateLayers();
+        }
+        
+        // Add Text
+        function addText() {
+            const text = new Konva.Text({
+                x: 100,
+                y: 300,
+                text: document.getElementById('textContent').value,
+                fontSize: parseInt(document.getElementById('fontSize').value),
+                fontFamily: document.getElementById('fontFamily').value,
+                fontStyle: document.getElementById('fontWeight').value,
+                fill: document.getElementById('fillColor').value,
+                opacity: parseInt(document.getElementById('opacity').value) / 100,
+                draggable: true,
+                name: 'shape'
+            });
+            
+            setupShapeEvents(text);
+            layer.add(text);
+            selectShape(text);
+            updateLayers();
+        }
+        
+        // Add Line
+        function addLine() {
+            const line = new Konva.Line({
+                points: [100, 400, 300, 400],
+                stroke: document.getElementById('strokeColor').value,
+                strokeWidth: parseInt(document.getElementById('strokeWidth').value),
+                opacity: parseInt(document.getElementById('opacity').value) / 100,
+                draggable: true,
+                name: 'shape'
+            });
+            
+            setupShapeEvents(line);
+            layer.add(line);
+            selectShape(line);
+            updateLayers();
+        }
+        
+        // Image upload
+        document.getElementById('imageUpload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const imageObj = new Image();
+                imageObj.onload = function() {
+                    const image = new Konva.Image({
+                        x: 100,
+                        y: 100,
+                        image: imageObj,
+                        width: Math.min(imageObj.width, 200),
+                        height: Math.min(imageObj.height, 200),
+                        draggable: true,
+                        name: 'shape'
+                    });
+                    
+                    setupShapeEvents(image);
+                    layer.add(image);
+                    selectShape(image);
+                    updateLayers();
+                };
+                imageObj.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
         });
-
-        canvas.addEventListener('mousemove', (e) => {
-            if (isDragging && selectedElement) {
-                const rect = canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                
-                selectedElement.x = x - dragOffset.x;
-                selectedElement.y = y - dragOffset.y;
-                redraw();
+        
+        // Setup shape events
+        function setupShapeEvents(shape) {
+            shape.on('click', () => selectShape(shape));
+            shape.on('dragend', updateLayers);
+        }
+        
+        // Select shape
+        function selectShape(shape) {
+            selectedShape = shape;
+            transformer.nodes([shape]);
+            updatePropertiesPanel();
+            updateLayers();
+        }
+        
+        // Deselect on background click
+        background.on('click', () => {
+            selectedShape = null;
+            transformer.nodes([]);
+            updateLayers();
+        });
+        
+        // Update properties panel
+        function updatePropertiesPanel() {
+            if (!selectedShape) return;
+            
+            if (selectedShape.fill) document.getElementById('fillColor').value = selectedShape.fill();
+            if (selectedShape.stroke) document.getElementById('strokeColor').value = selectedShape.stroke();
+            if (selectedShape.strokeWidth) {
+                document.getElementById('strokeWidth').value = selectedShape.strokeWidth();
+                document.getElementById('strokeWidthValue').textContent = selectedShape.strokeWidth();
             }
-        });
-
-        canvas.addEventListener('mouseup', () => {
-            isDragging = false;
-        });
-
-        // Property change handlers
-        document.getElementById('textContent').addEventListener('input', updateSelectedElement);
-        document.getElementById('fontSize').addEventListener('input', updateSelectedElement);
-        document.getElementById('fontFamily').addEventListener('change', updateSelectedElement);
-        document.getElementById('fillColor').addEventListener('input', updateSelectedElement);
-        document.getElementById('strokeColor').addEventListener('input', updateSelectedElement);
-        document.getElementById('strokeWidth').addEventListener('input', updateSelectedElement);
-        document.getElementById('cornerRadius').addEventListener('input', updateSelectedElement);
-
-        function updateSelectedElement() {
-            if (!selectedElement) return;
+            if (selectedShape.opacity) {
+                const opacity = Math.round(selectedShape.opacity() * 100);
+                document.getElementById('opacity').value = opacity;
+                document.getElementById('opacityValue').textContent = opacity;
+            }
             
-            selectedElement.text = document.getElementById('textContent').value;
-            selectedElement.fontSize = parseInt(document.getElementById('fontSize').value);
-            selectedElement.fontFamily = document.getElementById('fontFamily').value;
-            selectedElement.fillColor = document.getElementById('fillColor').value;
-            selectedElement.strokeColor = document.getElementById('strokeColor').value;
-            selectedElement.strokeWidth = parseInt(document.getElementById('strokeWidth').value);
-            selectedElement.cornerRadius = parseInt(document.getElementById('cornerRadius').value);
+            if (selectedShape.className === 'Text') {
+                document.getElementById('textContent').value = selectedShape.text();
+                document.getElementById('fontFamily').value = selectedShape.fontFamily();
+                document.getElementById('fontSize').value = selectedShape.fontSize();
+                document.getElementById('fontSizeValue').textContent = selectedShape.fontSize();
+                document.getElementById('fontWeight').value = selectedShape.fontStyle();
+            }
             
-            redraw();
-        }
-
-        function updateProperties() {
-            if (selectedElement) {
-                document.getElementById('textContent').value = selectedElement.text || '';
-                document.getElementById('fontSize').value = selectedElement.fontSize || 24;
-                document.getElementById('fontFamily').value = selectedElement.fontFamily || 'Arial';
-                document.getElementById('fillColor').value = selectedElement.fillColor || '#000000';
-                document.getElementById('strokeColor').value = selectedElement.strokeColor || '#000000';
-                document.getElementById('strokeWidth').value = selectedElement.strokeWidth || 0;
-                document.getElementById('cornerRadius').value = selectedElement.cornerRadius || 0;
+            if (selectedShape.cornerRadius) {
+                document.getElementById('cornerRadius').value = selectedShape.cornerRadius();
+                document.getElementById('cornerRadiusValue').textContent = selectedShape.cornerRadius();
             }
         }
-
-        function redraw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Apply property changes
+        function updateSelectedShape() {
+            if (!selectedShape) return;
             
-            elements.forEach(element => element.draw(ctx));
+            const props = {
+                opacity: parseInt(document.getElementById('opacity').value) / 100
+            };
+            
+            if (selectedShape.fill) props.fill = document.getElementById('fillColor').value;
+            if (selectedShape.stroke) {
+                props.stroke = document.getElementById('strokeColor').value;
+                props.strokeWidth = parseInt(document.getElementById('strokeWidth').value);
+            }
+            
+            if (selectedShape.className === 'Text') {
+                props.text = document.getElementById('textContent').value;
+                props.fontFamily = document.getElementById('fontFamily').value;
+                props.fontSize = parseInt(document.getElementById('fontSize').value);
+                props.fontStyle = document.getElementById('fontWeight').value;
+            }
+            
+            if (selectedShape.cornerRadius !== undefined) {
+                props.cornerRadius = parseInt(document.getElementById('cornerRadius').value);
+            }
+            
+            selectedShape.setAttrs(props);
+            layer.batchDraw();
         }
-
+        
+        // Property change listeners
+        ['fillColor', 'strokeColor', 'strokeWidth', 'opacity', 'cornerRadius', 'textContent', 'fontFamily', 'fontSize', 'fontWeight'].forEach(id => {
+            document.getElementById(id).addEventListener('input', function(e) {
+                if (id === 'strokeWidth') document.getElementById('strokeWidthValue').textContent = e.target.value;
+                if (id === 'opacity') document.getElementById('opacityValue').textContent = e.target.value;
+                if (id === 'cornerRadius') document.getElementById('cornerRadiusValue').textContent = e.target.value;
+                if (id === 'fontSize') document.getElementById('fontSizeValue').textContent = e.target.value;
+                updateSelectedShape();
+            });
+        });
+        
+        // Actions
+        function duplicateSelected() {
+            if (!selectedShape) return;
+            const clone = selectedShape.clone();
+            clone.x(clone.x() + 20);
+            clone.y(clone.y() + 20);
+            setupShapeEvents(clone);
+            layer.add(clone);
+            selectShape(clone);
+            updateLayers();
+        }
+        
+        function deleteSelected() {
+            if (!selectedShape) return;
+            selectedShape.destroy();
+            selectedShape = null;
+            transformer.nodes([]);
+            updateLayers();
+        }
+        
+        function bringToFront() {
+            if (!selectedShape) return;
+            selectedShape.moveToTop();
+            transformer.moveToTop();
+            layer.batchDraw();
+            updateLayers();
+        }
+        
+        function sendToBack() {
+            if (!selectedShape) return;
+            selectedShape.moveToBottom();
+            background.moveToBottom();
+            layer.batchDraw();
+            updateLayers();
+        }
+        
+        function clearCanvas() {
+            layer.destroyChildren();
+            layer.add(background);
+            layer.add(transformer);
+            selectedShape = null;
+            transformer.nodes([]);
+            updateLayers();
+        }
+        
+        // Update layers panel
         function updateLayers() {
             const layersList = document.getElementById('layersList');
             layersList.innerHTML = '';
             
-            elements.forEach((element, index) => {
+            const shapes = layer.children.filter(child => child.name() === 'shape');
+            shapes.reverse().forEach((shape, index) => {
                 const layerItem = document.createElement('div');
                 layerItem.className = 'layer-item';
-                if (element === selectedElement) {
-                    layerItem.classList.add('selected');
-                }
+                if (shape === selectedShape) layerItem.classList.add('selected');
                 
+                const name = shape.className || 'Shape';
                 layerItem.innerHTML = `
-                    <span>${element.type} ${index + 1}</span>
-                    <button class="layer-delete" onclick="deleteElement(${element.id})">×</button>
+                    <span>${name} ${shapes.length - index}</span>
+                    <div class="layer-controls">
+                        <button class="layer-btn" onclick="toggleVisibility('${shape._id}')">👁</button>
+                        <button class="layer-btn" onclick="deleteLayer('${shape._id}')">🗑</button>
+                    </div>
                 `;
                 
-                layerItem.addEventListener('click', (e) => {
-                    if (e.target.classList.contains('layer-delete')) return;
-                    selectedElement = element;
-                    redraw();
-                    updateLayers();
-                    updateProperties();
-                });
+                layerItem.onclick = (e) => {
+                    if (e.target.classList.contains('layer-btn')) return;
+                    selectShape(shape);
+                };
                 
                 layersList.appendChild(layerItem);
             });
+            
+            layer.batchDraw();
         }
-
-        function deleteElement(id) {
-            elements = elements.filter(el => el.id !== id);
-            if (selectedElement && selectedElement.id === id) {
-                selectedElement = null;
+        
+        function toggleVisibility(shapeId) {
+            const shape = layer.findOne(`#${shapeId}`);
+            if (shape) {
+                shape.visible(!shape.visible());
+                layer.batchDraw();
             }
-            redraw();
-            updateLayers();
-            updateProperties();
         }
-
-        // Action buttons
-        document.getElementById('backBtn').addEventListener('click', () => {
-            window.location.href = 'index.html';
-        });
-
-        document.getElementById('finishBtn').addEventListener('click', async () => {
-            // Convert canvas to image data
-            const imageData = canvas.toDataURL('image/png');
+        
+        function deleteLayer(shapeId) {
+            const shape = layer.findOne(`#${shapeId}`);
+            if (shape) {
+                if (shape === selectedShape) {
+                    selectedShape = null;
+                    transformer.nodes([]);
+                }
+                shape.destroy();
+                updateLayers();
+            }
+        }
+        
+        // Finish cover design
+        async function finishCover() {
+            transformer.nodes([]);
+            layer.batchDraw();
+            
+            const dataURL = stage.toDataURL({ pixelRatio: 2 });
             
             try {
-                const result = await ipcRenderer.invoke('add-cover-to-pdf', imageData);
+                const result = await ipcRenderer.invoke('add-cover-to-pdf', dataURL);
                 if (result.success) {
-                    alert('Cover added successfully! PDF is complete.');
-                    window.location.href = 'index.html';
+                    window.location.href = 'final-viewer.html';
                 } else {
-                    alert('Error adding cover: ' + result.error);
+                    alert('Error creating final PDF: ' + result.error);
                 }
             } catch (error) {
                 alert('Error: ' + error.message);
             }
-        });
-
-        // Initialize
-        initCanvas();
-        updateLayers();
-
-        // Make deleteElement global
-        window.deleteElement = deleteElement;
+        }
+        
+        // Initialize with sample text
+        setTimeout(() => {
+            addText();
+            selectedShape.setAttrs({
+                text: 'My Word Search Book',
+                fontSize: 36,
+                x: 150,
+                y: 200,
+                fontStyle: 'bold'
+            });
+            layer.batchDraw();
+            updateLayers();
+        }, 100);
+        
+        layer.batchDraw();
     </script>
 </body>
 </html>

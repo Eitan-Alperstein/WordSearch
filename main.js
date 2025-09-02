@@ -415,13 +415,11 @@ ipcMain.handle('add-cover-to-pdf', async (event, coverImageData) => {
     }
     
     try {
-        // Convert base64 image data to buffer
         const base64Data = coverImageData.replace(/^data:image\/png;base64,/, '');
         const imageBuffer = Buffer.from(base64Data, 'base64');
         
-        const filename = path.join(__dirname, 'temp', `puzzles-with-cover-${Date.now()}.pdf`);
+        const filename = path.join(__dirname, 'temp', `final-book-${Date.now()}.pdf`);
         
-        // Ensure temp directory exists
         const tempDir = path.dirname(filename);
         if (!fs.existsSync(tempDir)) {
             fs.mkdirSync(tempDir, { recursive: true });
@@ -437,6 +435,33 @@ ipcMain.handle('add-cover-to-pdf', async (event, coverImageData) => {
         return { success: false, error: error.message };
     }
 });
+
+async function createPDFWithCover(puzzles, filename, coverImageBuffer) {
+    return new Promise((resolve, reject) => {
+        const doc = new PDFDocument({ size: 'A4', margin: 0 });
+        const stream = fs.createWriteStream(filename);
+        doc.pipe(stream);
+
+        // Add cover page
+        doc.image(coverImageBuffer, 0, 0, { width: 595, height: 842 });
+        
+        // Add puzzle pages
+        puzzles.forEach((puzzle, index) => {
+            doc.addPage({ margin: 50 });
+            addPuzzlePage(doc, puzzle, index + 1);
+        });
+
+        // Add solution pages
+        puzzles.forEach((puzzle, index) => {
+            doc.addPage({ margin: 50 });
+            addSolutionPage(doc, puzzle, index + 1);
+        });
+
+        doc.end();
+        stream.on('finish', () => resolve(filename));
+        stream.on('error', reject);
+    });
+}
 
 // Save PDF dialog
 ipcMain.handle('save-pdf-as', async (event, currentFilename) => {
@@ -500,6 +525,120 @@ app.on('activate', () => {
 ipcMain.handle('check-test-mode', () => {
     return testMode;
 });
+
+// Cover design and final PDF creation
+let coverData = null;
+
+ipcMain.handle('create-final-pdf', async (event, cover) => {
+    try {
+        coverData = cover;
+        const finalFilename = path.join(__dirname, 'temp', `final-book-${Date.now()}.pdf`);
+        
+        await createFinalPDFWithCover(generatedPuzzles, coverData, finalFilename);
+        
+        return { success: true, filename: finalFilename };
+    } catch (error) {
+        console.error('Final PDF creation failed:', error.message);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('get-final-pdf-path', () => {
+    const finalFiles = fs.readdirSync(path.join(__dirname, 'temp'))
+        .filter(f => f.startsWith('final-book-'))
+        .sort((a, b) => b.localeCompare(a));
+    
+    if (finalFiles.length > 0) {
+        return { success: true, path: path.join(__dirname, 'temp', finalFiles[0]) };
+    }
+    return { success: false, error: 'No final PDF found' };
+});
+
+async function createFinalPDFWithCover(puzzles, cover, filename) {
+    return new Promise((resolve, reject) => {
+        const doc = new PDFDocument({ size: 'A4', margin: 0 });
+        const stream = fs.createWriteStream(filename);
+        doc.pipe(stream);
+
+        // Add cover page
+        addCoverPage(doc, cover);
+        
+        // Add puzzle pages
+        puzzles.forEach((puzzle, index) => {
+            doc.addPage({ margin: 50 });
+            addPuzzlePage(doc, puzzle, index + 1);
+        });
+
+        // Add solution pages
+        puzzles.forEach((puzzle, index) => {
+            doc.addPage({ margin: 50 });
+            addSolutionPage(doc, puzzle, index + 1);
+        });
+
+        doc.end();
+        stream.on('finish', () => resolve(filename));
+        stream.on('error', reject);
+    });
+}
+
+function addCoverPage(doc, cover) {
+    // Set page to full A4 size
+    doc.page.margins = { top: 0, bottom: 0, left: 0, right: 0 };
+    
+    cover.elements.forEach(el => {
+        doc.save();
+        doc.opacity(el.opacity || 1);
+        
+        if (el.type === 'rectangle') {
+            if (el.cornerRadius > 0) {
+                // Rounded rectangle
+                const x = el.x, y = el.y, w = el.width, h = el.height, r = el.cornerRadius;
+                doc.moveTo(x + r, y)
+                   .lineTo(x + w - r, y)
+                   .quadraticCurveTo(x + w, y, x + w, y + r)
+                   .lineTo(x + w, y + h - r)
+                   .quadraticCurveTo(x + w, y + h, x + w - r, y + h)
+                   .lineTo(x + r, y + h)
+                   .quadraticCurveTo(x, y + h, x, y + h - r)
+                   .lineTo(x, y + r)
+                   .quadraticCurveTo(x, y, x + r, y)
+                   .closePath();
+            } else {
+                doc.rect(el.x, el.y, el.width, el.height);
+            }
+            
+            if (el.fillColor) {
+                doc.fillColor(el.fillColor).fill();
+            }
+            
+            if (el.borderWidth > 0 && el.borderColor) {
+                doc.strokeColor(el.borderColor).lineWidth(el.borderWidth).stroke();
+            }
+        } else if (el.type === 'circle') {
+            doc.circle(el.x + el.width/2, el.y + el.height/2, Math.min(el.width, el.height)/2);
+            
+            if (el.fillColor) {
+                doc.fillColor(el.fillColor).fill();
+            }
+            
+            if (el.borderWidth > 0 && el.borderColor) {
+                doc.strokeColor(el.borderColor).lineWidth(el.borderWidth).stroke();
+            }
+        } else if (el.type === 'text') {
+            doc.fontSize(el.fontSize || 24)
+               .font(el.fontFamily || 'Helvetica')
+               .fillColor(el.fillColor || '#000000')
+               .text(el.text, el.x, el.y, { width: el.width });
+        } else if (el.type === 'image' && el.image) {
+            // Convert base64 to buffer for PDFKit
+            const base64Data = el.image.replace(/^data:image\/[a-z]+;base64,/, '');
+            const imageBuffer = Buffer.from(base64Data, 'base64');
+            doc.image(imageBuffer, el.x, el.y, { width: el.width, height: el.height });
+        }
+        
+        doc.restore();
+    });
+}
 
 console.log(`Word Search Generator Ready! ${testMode ? '*** TEST MODE ACTIVE ***' : ''}`);
 if (testMode) {
