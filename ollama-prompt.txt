@@ -20,9 +20,6 @@ Rules:
 - Do not ever generate words with spaces
 - Do not be creative with the words; each word should seem very obviously be connected to the category for a majority of people.
 - Don't use acronyms
-- Use the most common, basic words for each topic - avoid fancy, formal, or unusual words
-- No proper nouns unless the topic specifically calls for them (like Countries or Cities)
-- Stick to simple, everyday words that children would know
 - Make sure that all words generated are the same category (ie: don't generate the words "football" and "broncos"; instead, generate "broncos" and "chargers")
 
 Example output format for 4 words:
