@@ -4,11 +4,13 @@ Each sub-theme should be a specific, focused topic that relates to the main cate
 
 Rules:
 - Each sub-theme should be 1-4 words maximum
-- Focus on specific aspects, locations, equipment, techniques, history, famous examples, etc. within the category
-- Make sub-themes specific enough that someone could easily think of 10 related words
-- Avoid overly broad or overly narrow sub-themes
-- Include a mix of beginner-friendly and more advanced sub-themes
+- Focus on basic, simple aspects that children and families would know
+- Make sub-themes specific enough that someone could easily think of 10 simple, common words
+- Avoid complex, technical, or adult-oriented sub-themes
+- Keep all sub-themes family-friendly and appropriate for all ages
+- Use only beginner-friendly, everyday sub-themes that everyone would recognize
 - No duplicate or very similar sub-themes
+- Avoid anything medical, political, violent, or potentially inappropriate
 
 Examples for "Tennis":
 - Wimbledon Tournament, Tennis Equipment, Court Surfaces, Famous Players, Tennis Techniques, Grand Slam Events, Tennis Scoring, Professional Tours, Tennis Clothing, Court Dimensions
